@@ -927,13 +927,7 @@ debug_options(Name, Opts) ->
     end.
 
 dbg_options(Name, []) ->
-    Opts = 
-	case init:get_argument(generic_debug) of
-	    error ->
-		[];
-	    _ ->
-		[log, statistics]
-	end,
+    Opts = [log, statistics],
     dbg_opts(Name, Opts);
 dbg_options(Name, Opts) ->
     dbg_opts(Name, Opts).
