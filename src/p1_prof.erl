@@ -2,11 +2,10 @@
 %%% File    : p1_prof.erl
 %%% Author  : Evgeniy Khramtsov <ekhramtsov@process-one.net>
 %%% Description : Handy wrapper around eprof and fprof
-%%%
 %%% Created : 23 Jan 2010 by Evgeniy Khramtsov <ekhramtsov@process-one.net>
 %%%
 %%%
-%%% ejabberd, Copyright (C) 2002-2014   ProcessOne
+%%% Copyright (C) 2002-2015   ProcessOne
 %%%
 %%% This program is free software; you can redistribute it and/or
 %%% modify it under the terms of the GNU General Public License as
@@ -24,6 +23,7 @@
 %%% 02111-1307 USA
 %%%
 %%%-------------------------------------------------------------------
+
 -module(p1_prof).
 
 %% API

@@ -14,7 +14,8 @@
 %% AB. All Rights Reserved.''
 %% 
 %% The code has been modified and improved by ProcessOne.
-%% Copyright 2007-2014, ProcessOne
+%%
+%% Copyright 2007-2015   ProcessOne
 %%
 %%  The change adds the following features:
 %%   - You can send exit(priority_shutdown) to the p1_fsm process to
