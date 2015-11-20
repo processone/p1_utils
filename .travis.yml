@@ -5,7 +5,7 @@ language: erlang
 install:
   - rebar get-deps
 
-script: rebar compile xref && rebar skip_deps=true eunit
+script: rebar compile && rebar skip_deps=true eunit
 
 otp_release:
   - 17.1
