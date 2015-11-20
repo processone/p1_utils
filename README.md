@@ -1,4 +1,4 @@
-# p1_utils
+# p1_utils [![Build Status](https://travis-ci.org/processone/p1_utils.svg?branch=master)](https://travis-ci.org/processone/p1_utils)
 
 p1_utils is an application containing ProcessOne modules and tools that are leveraged in other development projects:
 
