@@ -1,2 +1,8 @@
 rebar
 ebin/
+.eunit
+_build
+.rebar/
+
+*.eqc
+.eqc-info
