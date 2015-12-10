@@ -2,7 +2,7 @@
 %%% File    : rebar.config.script
 %%% Author  : Mickael Remond <mremond@process-one.net>
 %%% Purpose : Rebar build script. Compliant with rebar and rebar3.
-%%% Created : 24 Nov 2015 by Evgeniy Khramtsov <mremond@process-one.net>
+%%% Created : 24 Nov 2015 by Mickael Remond <mremond@process-one.net>
 %%%
 %%% Copyright (C) 2002-2015 ProcessOne, SARL. All Rights Reserved.
 %%%
