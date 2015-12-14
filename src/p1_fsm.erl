@@ -602,12 +602,12 @@ handle_msg(Msg, Parent, Name, StateName, StateData, Mod, _Time,
 			    true ->
 				 Time1
 			 end,
-	    Now = now(),
+	    Now = p1_time_compat:monotonic_time(milli_seconds),
 	    Reason = case catch rpc_call(Node, M, F, A, RPCTimeout) of
 			 {ok, Clone} ->
 			     process_flag(trap_exit, true),
 			     MRef = erlang:monitor(process, Clone),
-			     NowDiff = timer:now_diff(now(), Now) div 1000,
+			     NowDiff = p1_time_compat:monotonic_time(milli_seconds) - Now,
 			     TimeLeft = lists:max([Time1 - NowDiff, 0]),
 			     TRef = erlang:start_timer(TimeLeft, self(), timeout),
 			     relay_messages(MRef, TRef, Clone, Queue);
@@ -665,12 +665,12 @@ handle_msg(Msg, Parent, Name, StateName, StateData,
 			    true ->
 				 Time1
 			 end,
-	    Now = now(),
+	    Now = p1_time_compat:monotonic_time(milli_seconds),
 	    Reason = case catch rpc_call(Node, M, F, A, RPCTimeout) of
 			 {ok, Clone} ->
 			     process_flag(trap_exit, true),
 			     MRef = erlang:monitor(process, Clone),
-			     NowDiff = timer:now_diff(now(), Now) div 1000,
+			     NowDiff = p1_time_compat:monotonic_time(milli_seconds) - Now,
 			     TimeLeft = lists:max([Time1 - NowDiff, 0]),
 			     TRef = erlang:start_timer(TimeLeft, self(), timeout),
 			     relay_messages(MRef, TRef, Clone, Queue);
