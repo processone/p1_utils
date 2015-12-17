@@ -10,3 +10,5 @@ p1_utils is an application containing ProcessOne modules and tools that are leve
 * `treap` is a treap algorithm implementation. It is a randomized binary search tree. See: https://en.wikipedia.org/wiki/Treap
 * `p1_time_compat` is a module to ease support and migration of Erlang
   time management function from Erlang R16/R17 to Erlang R18.
+
+If you have `rebar` binary, you can generate `p1_utils` documentation by running `rebar3 edoc`.

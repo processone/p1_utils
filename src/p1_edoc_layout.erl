@@ -301,7 +301,7 @@ function_index(Fs, Cols) ->
 	     {h2, [{a, [{name, ?FUNCTION_INDEX_LABEL}],
 		    [?FUNCTION_INDEX_TITLE]}]},
 	     ?NL,
-	     {table, [{width, "100%"}, {border, 1},
+	     {table, [{width, "100%"}, {border, 0},
 		      {cellspacing,0}, {cellpadding,2},
 		      {summary, "function index"}],
 	      Rows},
@@ -1004,7 +1004,7 @@ xhtml(Title, CSS, Body, Encoding) ->
 		     {title, Title},
 		     ?NL] ++ CSS},
 	     ?NL,
-	     {body, [{bgcolor, "white"}], Body},
+	     {body, [{bgcolor, "white"},{class, "mainpane"}], Body},
 	     ?NL]
      },
      ?NL].
