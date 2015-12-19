@@ -25,7 +25,7 @@
 
 -export([empty/0, insert/4, delete/2, delete_root/1,
 	 get_root/1, lookup/2, is_empty/1, fold/3, from_list/1,
-	 to_list/1]).
+	 to_list/1, delete_higher_priorities/2]).
 
 -type hashkey() :: {non_neg_integer(), any()}.
 
@@ -120,6 +120,17 @@ delete_root({HashKey, Priority, Value, Left, Right}) ->
 		  delete_root({HashKey, Priority, Value, Left, LeftR}),
 		  RightR}
 	  end
+    end.
+
+delete_higher_priorities(Treap, DeletePriority) ->
+    case treap:is_empty(Treap) of
+      true -> Treap;
+      false ->
+          {_Key, Priority, _Value} = treap:get_root(Treap),
+          if Priority > DeletePriority ->
+                 delete_higher_priorities(treap:delete_root(Treap), DeletePriority);
+             true -> Treap
+          end
     end.
 
 is_empty(nil) -> true;
