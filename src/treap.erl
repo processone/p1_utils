@@ -25,7 +25,8 @@
 
 -export([empty/0, insert/4, delete/2, delete_root/1,
 	 get_root/1, lookup/2, is_empty/1, fold/3, from_list/1,
-	 to_list/1, delete_higher_priorities/2]).
+	 to_list/1, delete_higher_priorities/2,
+        priority_from_current_time/0, priority_from_current_time/1]).
 
 -type hashkey() :: {non_neg_integer(), any()}.
 
@@ -132,6 +133,27 @@ delete_higher_priorities(Treap, DeletePriority) ->
              true -> Treap
           end
     end.
+
+priority_from_current_time() ->
+    priority_from_current_time(0).
+
+-ifdef(NEED_TIME_FALLBACKS).
+
+priority_from_current_time(MsOffset) ->
+    {MS, S, US} = now(),
+    -(MS*1000000+S)*1000000+US.
+
+-else.
+
+priority_from_current_time(MsOffset) ->
+    case MsOffset of
+        0 ->
+            {-erlang:monotonic_time(micro_seconds), -erlang:unique_integer([positive])};
+        _ ->
+            {-erlang:monotonic_time(micro_seconds)+MsOffset, 0}
+    end.
+
+-endif.
 
 is_empty(nil) -> true;
 is_empty({_HashKey, _Priority, _Value, _Left,
