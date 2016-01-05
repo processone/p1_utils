@@ -1,3 +1,8 @@
+# Version 1.0.3
+
+* Added time related compatibility module, added API documentation (Paweł Chmielowski)
+* Improve documentation readability (Marek Foss)
+
 # Version 1.0.2
 
 * Add p1_time_compat module to ease support for both R17 and R18 Erlang time features (Paweł Chmielowski)
