@@ -53,6 +53,7 @@
 	 time_offset/1,
 	 convert_time_unit/3,
 	 timestamp/0,
+	 unique_timestamp/0,
 	 unique_integer/0,
 	 unique_integer/1,
 	 monitor/2,
@@ -105,6 +106,9 @@ convert_time_unit(Time, FromUnit, ToUnit) ->
     end.
 
 timestamp() ->
+    erlang:now().
+
+unique_timestamp() ->
     erlang:now().
 
 unique_integer() ->
@@ -248,6 +252,10 @@ convert_time_unit(Time, FromUnit, ToUnit) ->
 
 timestamp() ->
     erlang:timestamp().
+
+unique_timestamp() ->
+    {MS, S, _} = erlang:timestamp(),
+    {MS, S, erlang:unique_integer([positive, monotonic])}.
 
 unique_integer() ->
     erlang:unique_integer().

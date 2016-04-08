@@ -141,7 +141,7 @@ priority_from_current_time() ->
 
 priority_from_current_time(MsOffset) ->
     {MS, S, US} = now(),
-    -(MS*1000000+S)*1000000+US.
+    -((MS*1000000+S)*1000000+US) + MsOffset.
 
 -else.
 
@@ -150,7 +150,7 @@ priority_from_current_time(MsOffset) ->
         0 ->
             {-erlang:monotonic_time(micro_seconds), -erlang:unique_integer([positive])};
         _ ->
-            {-erlang:monotonic_time(micro_seconds)+MsOffset, 0}
+            {-erlang:monotonic_time(micro_seconds) + MsOffset, 0}
     end.
 
 -endif.
