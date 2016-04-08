@@ -1,3 +1,7 @@
+# Version 1.0.4
+
+* Adds p1_time_compat:unique_timestamp() that returns value resembling what now() was returning
+
 # Version 1.0.3
 
 * Added time related compatibility module, added API documentation (Paweł Chmielowski)
