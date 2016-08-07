@@ -1,3 +1,7 @@
+# Version 1.0.5
+
+* Erlang R19 compliance (Paweł Chmielowski)
+
 # Version 1.0.4
 
 * Adds p1_time_compat:unique_timestamp() that returns value resembling what now() was returning
