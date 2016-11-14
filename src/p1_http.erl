@@ -32,7 +32,7 @@
 -ifdef(USE_IBROWSE).
 
 start() ->
-    ejabberd:start_app(ibrowse).
+    application:start(ibrowse).
 
 stop() ->
     application:stop(ibrowse).
@@ -60,7 +60,7 @@ set_pool_size(Size) ->
 -ifdef(USE_LHTTPC).
 
 start() ->
-    ejabberd:start_app(lhttpc).
+    application:start(lhttpc).
 
 stop() ->
     application:stop(lhttpc).
@@ -87,7 +87,7 @@ set_pool_size(Size) ->
 -else.
 
 start() ->
-    ejabberd:start_app(inets).
+    application:start(inets).
 
 stop() ->
     application:stop(inets).
