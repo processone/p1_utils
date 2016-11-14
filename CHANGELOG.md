@@ -1,3 +1,7 @@
+# Version 1.0.6
+
+* Add p1_http
+
 # Version 1.0.5
 
 * Erlang R19 compliance (Paweł Chmielowski)
