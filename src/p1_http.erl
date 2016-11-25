@@ -29,6 +29,21 @@
 	 request/3, request/4, request/5,
 	 get_pool_size/0, set_pool_size/1]).
 
+-type header() :: {string() | atom(), string()}.
+
+-type headers() :: [header()].
+
+-type option() :: {connect_timeout, timeout()} |
+		  {timeout, timeout()} | {send_retry, non_neg_integer()} |
+		  {partial_upload, non_neg_integer() | infinity} |
+		  {partial_download, pid(), non_neg_integer() | infinity}.
+
+-type options() :: [option()].
+
+-type result() :: {ok,
+		   {{pos_integer(), string()}, headers(), string()}} |
+		  {error, atom()}.
+
 -ifdef(USE_IBROWSE).
 
 start() ->
@@ -37,6 +52,31 @@ start() ->
 stop() ->
     application:stop(ibrowse).
 
+%% @spec (Method, URL, Hdrs, RequestBody, Options) -> Result
+%%   Method = atom()
+%%   URL = string()
+%%   Hdrs = [{Header, Value}]
+%%   Header = string()
+%%   Value = string()
+%%   RequestBody = string()
+%%   Options = [Option]
+%%   Option = {timeout, Milliseconds | infinity} |
+%%            {connect_timeout, Milliseconds | infinity} |
+%%            {socket_options, [term()]}
+
+%%   Milliseconds = integer()
+%%   Result = {ok, StatusCode, Hdrs, ResponseBody}
+%%            | {error, Reason}
+%%   StatusCode = integer()
+%%   ResponseBody = string()
+%%   Reason = connection_closed | connect_timeout | timeout
+%% @doc Sends a request with a body.
+%% Would be the same as calling
+%% `request(Method, URL, Hdrs, Body, [])', that is {@link request/5}
+%% with no options.
+%% @end
+%% @see request/5
+-spec request(atom(), string(), headers(), string(), options()) -> result().
 request(Method, URL, Hdrs, Body, Opts) ->
     TimeOut = proplists:get_value(timeout, Opts, infinity),
     Options = [{inactivity_timeout, TimeOut}
@@ -65,6 +105,31 @@ start() ->
 stop() ->
     application:stop(lhttpc).
 
+%% @spec (Method, URL, Hdrs, RequestBody, Options) -> Result
+%%   Method = atom()
+%%   URL = string()
+%%   Hdrs = [{Header, Value}]
+%%   Header = string()
+%%   Value = string()
+%%   RequestBody = string()
+%%   Options = [Option]
+%%   Option = {timeout, Milliseconds | infinity} |
+%%            {connect_timeout, Milliseconds | infinity} |
+%%            {socket_options, [term()]}
+
+%%   Milliseconds = integer()
+%%   Result = {ok, StatusCode, Hdrs, ResponseBody}
+%%            | {error, Reason}
+%%   StatusCode = integer()
+%%   ResponseBody = string()
+%%   Reason = connection_closed | connect_timeout | timeout
+%% @doc Sends a request with a body.
+%% Would be the same as calling
+%% `request(Method, URL, Hdrs, Body, [])', that is {@link request/5}
+%% with no options.
+%% @end
+%% @see request/5
+-spec request(atom(), string(), headers(), string(), options()) -> result().
 request(Method, URL, Hdrs, Body, Opts) ->
     {[TO, SO], Rest} = proplists:split(Opts, [timeout, socket_options]),
     TimeOut = proplists:get_value(timeout, TO, infinity),
@@ -97,6 +162,31 @@ to_list(Str) when is_binary(Str) ->
 to_list(Str) ->
     Str.
 
+%% @spec (Method, URL, Hdrs, RequestBody, Options) -> Result
+%%   Method = atom()
+%%   URL = string()
+%%   Hdrs = [{Header, Value}]
+%%   Header = string()
+%%   Value = string()
+%%   RequestBody = string()
+%%   Options = [Option]
+%%   Option = {timeout, Milliseconds | infinity} |
+%%            {connect_timeout, Milliseconds | infinity} |
+%%            {socket_options, [term()]}
+
+%%   Milliseconds = integer()
+%%   Result = {ok, StatusCode, Hdrs, ResponseBody}
+%%            | {error, Reason}
+%%   StatusCode = integer()
+%%   ResponseBody = string()
+%%   Reason = connection_closed | connect_timeout | timeout
+%% @doc Sends a request with a body.
+%% Would be the same as calling
+%% `request(Method, URL, Hdrs, Body, [])', that is {@link request/5}
+%% with no options.
+%% @end
+%% @see request/5
+-spec request(atom(), string(), headers(), string(), options()) -> result().
 request(Method, URLRaw, HdrsRaw, Body, Opts) ->
     Hdrs = lists:map(fun({N, V}) ->
                              {to_list(N), to_list(V)}
@@ -134,21 +224,6 @@ set_pool_size(Size) ->
 -endif.
 
 -endif.
-
--type header() :: {string() | atom(), string()}.
-
--type headers() :: [header()].
-
--type option() :: {connect_timeout, timeout()} |
-                 {timeout, timeout()} | {send_retry, non_neg_integer()} |
-                 {partial_upload, non_neg_integer() | infinity} |
-                 {partial_download, pid(), non_neg_integer() | infinity}.
-
--type options() :: [option()].
-
--type result() :: {ok,
-                  {{pos_integer(), string()}, headers(), string()}} |
-                 {error, atom()}.
 
 %% @spec (URL) -> Result
 %%   URL = string()
@@ -271,32 +346,6 @@ request(Method, URL, Hdrs) ->
 -spec request(atom(), string(), headers(), string()) -> result().
 request(Method, URL, Hdrs, Body) ->
     request(Method, URL, Hdrs, Body, []).
-
-%% @spec (Method, URL, Hdrs, RequestBody, Options) -> Result
-%%   Method = atom()
-%%   URL = string()
-%%   Hdrs = [{Header, Value}]
-%%   Header = string()
-%%   Value = string()
-%%   RequestBody = string()
-%%   Options = [Option]
-%%   Option = {timeout, Milliseconds | infinity} |
-%%            {connect_timeout, Milliseconds | infinity} |
-%%            {socket_options, [term()]} |
-
-%%   Milliseconds = integer()
-%%   Result = {ok, StatusCode, Hdrs, ResponseBody}
-%%            | {error, Reason}
-%%   StatusCode = integer()
-%%   ResponseBody = string()
-%%   Reason = connection_closed | connect_timeout | timeout
-%% @doc Sends a request with a body.
-%% Would be the same as calling
-%% `request(Method, URL, Hdrs, Body, [])', that is {@link request/5}
-%% with no options.
-%% @end
-%% @see request/5
--spec request(atom(), string(), headers(), string(), options()) -> result().
 
 % ibrowse {response_format, response_format()} |
 % Options - [option()]
