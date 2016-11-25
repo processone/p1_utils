@@ -25,92 +25,28 @@
 
 -author('ebustos@process-one.net').
 
--export([start/0, stop/0, get/1, get/2, post/2, post/3,
-	 request/3, request/4, request/5,
-	 get_pool_size/0, set_pool_size/1]).
+-export([get/1, get/2, get_pool_size/0, post/2, post/3,
+	 request/3, request/4, request/5, set_pool_size/1,
+	 start/0, stop/0]).
 
 -ifdef(USE_IBROWSE).
 
-start() ->
-    application:start(ibrowse).
+start() -> application:start(inets).
 
-stop() ->
-    application:stop(ibrowse).
-
-request(Method, URL, Hdrs, Body, Opts) ->
-    TimeOut = proplists:get_value(timeout, Opts, infinity),
-    Options = [{inactivity_timeout, TimeOut}
-	       | proplists:delete(timeout, Opts)],
-    case ibrowse:send_req(URL, Hdrs, Method, Body, Options)
-	of
-      {ok, Status, Headers, Response} ->
-	  {ok, jlib:binary_to_integer(Status), Headers,
-	   Response};
-      {error, Reason} -> {error, Reason}
-    end.
-
-get_pool_size() ->
-    application:get_env(ibrowse, default_max_sessions, 10).
-
-set_pool_size(Size) ->
-    application:set_env(ibrowse, default_max_sessions, Size).
-
--else.
-
--ifdef(USE_LHTTPC).
-
-start() ->
-    application:start(lhttpc).
-
-stop() ->
-    application:stop(lhttpc).
-
-request(Method, URL, Hdrs, Body, Opts) ->
-    {[TO, SO], Rest} = proplists:split(Opts, [timeout, socket_options]),
-    TimeOut = proplists:get_value(timeout, TO, infinity),
-    SockOpt = proplists:get_value(socket_options, SO, []),
-    Options = [{connect_options, SockOpt} | Rest],
-    Result = lhttpc:request(URL, Method, Hdrs, Body, TimeOut, Options),
-    case Result of
-      {ok, {{Status, _Reason}, Headers, Response}} ->
-	  {ok, Status, Headers, (Response)};
-      {error, Reason} -> {error, Reason}
-    end.
-
-get_pool_size() ->
-    Opts = proplists:get_value(lhttpc_manager, lhttpc_manager:list_pools()),
-    proplists:get_value(max_pool_size,Opts).
-
-set_pool_size(Size) ->
-    lhttpc_manager:set_max_pool_size(lhttpc_manager, Size).
-
--else.
-
-start() ->
-    application:start(inets).
-
-stop() ->
-    application:stop(inets).
-
-to_list(Str) when is_binary(Str) ->
-    binary_to_list(Str);
-to_list(Str) ->
-    Str.
+stop() -> application:stop(inets).
 
 request(Method, URLRaw, HdrsRaw, Body, Opts) ->
-    Hdrs = lists:map(fun({N, V}) ->
-                             {to_list(N), to_list(V)}
-                     end, HdrsRaw),
+    Hdrs = [request_1(V1) || V1 <- HdrsRaw],
     URL = to_list(URLRaw),
-
     Request = case Method of
 		get -> {URL, Hdrs};
 		head -> {URL, Hdrs};
 		delete -> {URL, Hdrs};
 		_ -> % post, etc.
 		    {URL, Hdrs,
-		     to_list(proplists:get_value(<<"content-type">>, HdrsRaw, [])),
-                     Body}
+		     to_list(proplists:get_value(<<"content-type">>, HdrsRaw,
+						 [])),
+		     Body}
 	      end,
     Options = case proplists:get_value(timeout, Opts,
 				       infinity)
@@ -124,9 +60,93 @@ request(Method, URLRaw, HdrsRaw, Body, Opts) ->
       {error, Reason} -> {error, Reason}
     end.
 
+request_1({N, V}) -> {to_list(N), to_list(V)}.
+
 get_pool_size() ->
-    {ok, Size} = httpc:get_option(max_sessions),
-    Size.
+    {ok, Size} = httpc:get_option(max_sessions), Size.
+
+set_pool_size(Size) ->
+    httpc:set_option(max_sessions, Size).
+
+-else.
+
+-ifdef(USE_LHTTPC).
+
+start() -> application:start(inets).
+
+stop() -> application:stop(inets).
+
+request(Method, URLRaw, HdrsRaw, Body, Opts) ->
+    Hdrs = [request_1(V1) || V1 <- HdrsRaw],
+    URL = to_list(URLRaw),
+    Request = case Method of
+		get -> {URL, Hdrs};
+		head -> {URL, Hdrs};
+		delete -> {URL, Hdrs};
+		_ -> % post, etc.
+		    {URL, Hdrs,
+		     to_list(proplists:get_value(<<"content-type">>, HdrsRaw,
+						 [])),
+		     Body}
+	      end,
+    Options = case proplists:get_value(timeout, Opts,
+				       infinity)
+		  of
+		infinity -> proplists:delete(timeout, Opts);
+		_ -> Opts
+	      end,
+    case httpc:request(Method, Request, Options, []) of
+      {ok, {{_, Status, _}, Headers, Response}} ->
+	  {ok, Status, Headers, Response};
+      {error, Reason} -> {error, Reason}
+    end.
+
+request_1({N, V}) -> {to_list(N), to_list(V)}.
+
+get_pool_size() ->
+    {ok, Size} = httpc:get_option(max_sessions), Size.
+
+set_pool_size(Size) ->
+    httpc:set_option(max_sessions, Size).
+
+-else.
+
+start() -> application:start(inets).
+
+stop() -> application:stop(inets).
+
+to_list(Str) when is_binary(Str) -> binary_to_list(Str);
+to_list(Str) -> Str.
+
+request(Method, URLRaw, HdrsRaw, Body, Opts) ->
+    Hdrs = [request_1(V1) || V1 <- HdrsRaw],
+    URL = to_list(URLRaw),
+    Request = case Method of
+		get -> {URL, Hdrs};
+		head -> {URL, Hdrs};
+		delete -> {URL, Hdrs};
+		_ -> % post, etc.
+		    {URL, Hdrs,
+		     to_list(proplists:get_value(<<"content-type">>, HdrsRaw,
+						 [])),
+		     Body}
+	      end,
+    Options = case proplists:get_value(timeout, Opts,
+				       infinity)
+		  of
+		infinity -> proplists:delete(timeout, Opts);
+		_ -> Opts
+	      end,
+    case httpc:request(Method, Request, Options, []) of
+      {ok, {{_, Status, _}, Headers, Response}} ->
+	  {ok, Status, Headers, Response};
+      {error, Reason} -> {error, Reason}
+    end.
+
+request_1({N, V}) -> {to_list(N), to_list(V)}.
+
+get_pool_size() ->
+    {ok, Size} = httpc:get_option(max_sessions), Size.
 
 set_pool_size(Size) ->
     httpc:set_option(max_sessions, Size).
@@ -135,51 +155,20 @@ set_pool_size(Size) ->
 
 -endif.
 
--type({header,
-       {type, 63, tuple,
-	[{type, 63, union,
-	  [{type, 63, string, []}, {type, 63, atom, []}]},
-	 {type, 63, string, []}]},
-       []}).
+-type header() :: {string() | atom(), string()}.
 
--type({headers,
-       {type, 64, list, [{type, 64, header, []}]}, []}).
+-type headers() :: [header()].
 
--type({option,
-       {type, 67, union,
-	[{type, 67, tuple,
-	  [{atom, 67, connect_timeout}, {type, 67, timeout, []}]},
-	 {type, 68, tuple,
-	  [{atom, 68, timeout}, {type, 68, timeout, []}]},
-	 {type, 70, tuple,
-	  [{atom, 70, send_retry},
-	   {type, 70, non_neg_integer, []}]},
-	 {type, 71, tuple,
-	  [{atom, 71, partial_upload},
-	   {type, 71, union,
-	    [{type, 71, non_neg_integer, []},
-	     {atom, 71, infinity}]}]},
-	 {type, 72, tuple,
-	  [{atom, 72, partial_download}, {type, 72, pid, []},
-	   {type, 72, union,
-	    [{type, 72, non_neg_integer, []},
-	     {atom, 72, infinity}]}]}]},
-       []}).
+-type option() :: {connect_timeout, timeout()} |
+		  {timeout, timeout()} | {send_retry, non_neg_integer()} |
+		  {partial_upload, non_neg_integer() | infinity} |
+		  {partial_download, pid(), non_neg_integer() | infinity}.
 
--type({options,
-       {type, 74, list, [{type, 74, option, []}]}, []}).
+-type options() :: [option()].
 
--type({result,
-       {type, 76, union,
-	[{type, 76, tuple,
-	  [{atom, 76, ok},
-	   {type, 76, tuple,
-	    [{type, 76, tuple,
-	      [{type, 76, pos_integer, []}, {type, 76, string, []}]},
-	     {type, 76, headers, []}, {type, 76, string, []}]}]},
-	 {type, 77, tuple,
-	  [{atom, 77, error}, {type, 77, atom, []}]}]},
-       []}).
+-type result() :: {ok,
+		   {{pos_integer(), string()}, headers(), string()}} |
+		  {error, atom()}.
 
 %% @spec (URL) -> Result
 %%   URL = string()
@@ -194,6 +183,7 @@ set_pool_size(Size) ->
 %% @end
 %% @see request/3
 -spec get(string()) -> result().
+
 get(URL) -> request(get, URL, []).
 
 %% @spec (URL, Hdrs) -> Result
@@ -211,6 +201,7 @@ get(URL) -> request(get, URL, []).
 %% @end
 %% @see request/3
 -spec get(string(), headers()) -> result().
+
 get(URL, Hdrs) -> request(get, URL, Hdrs).
 
 %% @spec (URL, RequestBody) -> Result
@@ -227,6 +218,7 @@ get(URL, Hdrs) -> request(get, URL, Hdrs).
 %% @end
 %% @see request/4
 -spec post(string(), string()) -> result().
+
 post(URL, Body) ->
     request(post, URL,
 	    [{<<"content-type">>, <<"x-www-form-urlencoded">>}],
@@ -249,6 +241,7 @@ post(URL, Body) ->
 %% @end
 %% @see request/4
 -spec post(string(), headers(), string()) -> result().
+
 post(URL, Hdrs, Body) ->
     NewHdrs = case [X
 		    || {X, _} <- Hdrs,
@@ -278,6 +271,7 @@ post(URL, Hdrs, Body) ->
 %% @end
 %% @see request/5
 -spec request(atom(), string(), headers()) -> result().
+
 request(Method, URL, Hdrs) ->
     request(Method, URL, Hdrs, [], []).
 
@@ -299,7 +293,9 @@ request(Method, URL, Hdrs) ->
 %% with no options.
 %% @end
 %% @see request/5
--spec request(atom(), string(), headers(), string()) -> result().
+-spec request(atom(), string(), headers(),
+	      string()) -> result().
+
 request(Method, URL, Hdrs, Body) ->
     request(Method, URL, Hdrs, Body, []).
 
@@ -327,7 +323,8 @@ request(Method, URL, Hdrs, Body) ->
 %% with no options.
 %% @end
 %% @see request/5
--spec request(atom(), string(), headers(), string(), options()) -> result().
+-spec request(atom(), string(), headers(), string(),
+	      options()) -> result().
 
 % ibrowse {response_format, response_format()} |
 % Options - [option()]
