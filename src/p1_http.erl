@@ -135,51 +135,20 @@ set_pool_size(Size) ->
 
 -endif.
 
--type({header,
-       {type, 63, tuple,
-	[{type, 63, union,
-	  [{type, 63, string, []}, {type, 63, atom, []}]},
-	 {type, 63, string, []}]},
-       []}).
+-type header() :: {string() | atom(), string()}.
 
--type({headers,
-       {type, 64, list, [{type, 64, header, []}]}, []}).
+-type headers() :: [header()].
 
--type({option,
-       {type, 67, union,
-	[{type, 67, tuple,
-	  [{atom, 67, connect_timeout}, {type, 67, timeout, []}]},
-	 {type, 68, tuple,
-	  [{atom, 68, timeout}, {type, 68, timeout, []}]},
-	 {type, 70, tuple,
-	  [{atom, 70, send_retry},
-	   {type, 70, non_neg_integer, []}]},
-	 {type, 71, tuple,
-	  [{atom, 71, partial_upload},
-	   {type, 71, union,
-	    [{type, 71, non_neg_integer, []},
-	     {atom, 71, infinity}]}]},
-	 {type, 72, tuple,
-	  [{atom, 72, partial_download}, {type, 72, pid, []},
-	   {type, 72, union,
-	    [{type, 72, non_neg_integer, []},
-	     {atom, 72, infinity}]}]}]},
-       []}).
+-type option() :: {connect_timeout, timeout()} |
+                 {timeout, timeout()} | {send_retry, non_neg_integer()} |
+                 {partial_upload, non_neg_integer() | infinity} |
+                 {partial_download, pid(), non_neg_integer() | infinity}.
 
--type({options,
-       {type, 74, list, [{type, 74, option, []}]}, []}).
+-type options() :: [option()].
 
--type({result,
-       {type, 76, union,
-	[{type, 76, tuple,
-	  [{atom, 76, ok},
-	   {type, 76, tuple,
-	    [{type, 76, tuple,
-	      [{type, 76, pos_integer, []}, {type, 76, string, []}]},
-	     {type, 76, headers, []}, {type, 76, string, []}]}]},
-	 {type, 77, tuple,
-	  [{atom, 77, error}, {type, 77, atom, []}]}]},
-       []}).
+-type result() :: {ok,
+                  {{pos_integer(), string()}, headers(), string()}} |
+                 {error, atom()}.
 
 %% @spec (URL) -> Result
 %%   URL = string()
