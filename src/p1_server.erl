@@ -114,6 +114,8 @@
 -export([system_continue/3,
 	 system_terminate/4,
 	 system_code_change/4,
+         system_get_state/1,
+         system_replace_state/2,
 	 format_status/2]).
 
 %% Internal exports
@@ -439,7 +441,7 @@ collect_messages(Queue, QueueLen, Time) ->
 			Input ->
 			    {Input, Queue, QueueLen}
 		    after Time ->
-			    {{'$gen_event', timeout}, Queue, QueueLen}
+			    {timeout, Queue, QueueLen}
 		    end
 	    end
     end.
@@ -459,15 +461,6 @@ decode_msg(Msg, Parent, Name, State, Mod, Time, Debug,
 	   Limits, Queue, QueueLen, Hib) ->
     put('$internal_queue_len', QueueLen),
     case Msg of
-	{system, From, get_state} ->
-	    sys:handle_system_msg(get_state, From, Parent, ?MODULE, Debug,
-				  {State, [Name, State, Mod, Time,
-                                           Limits, Queue, QueueLen]}, Hib);
-	{system, From, {replace_state, StateFun}} ->
-	    NState = try StateFun(State) catch _:_ -> State end,
-	    sys:handle_system_msg(replace_state, From, Parent, ?MODULE, Debug,
-				  {NState, [Name, NState, Mod, Time,
-                                            Limits, Queue, QueueLen]}, Hib);
 	{system, From, Req} ->
 	    sys:handle_system_msg(Req, From, Parent, ?MODULE, Debug,
 				  [Name, State, Mod, Time,
@@ -807,6 +800,17 @@ system_code_change([Name, State, Mod, Time,
                                 Limits, Queue, QueueLen]};
 	Else -> Else
     end.
+
+system_get_state([_Name, State, _Mod, _Time,
+                  _Limits, _Queue, _QueueLen]) ->
+    {ok, State}.
+
+system_replace_state(StateFun,
+                     [Name, State, Mod, Time,
+                      Limits, Queue, QueueLen]) ->
+    NState = StateFun(State),
+    {ok, NState, [Name, NState, Mod, Time,
+                  Limits, Queue, QueueLen]}.
 
 %%-----------------------------------------------------------------
 %% Format debug messages.  Print them as the call-back module sees
