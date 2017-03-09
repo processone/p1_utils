@@ -9,6 +9,7 @@
                   stdlib
                  ]},
   {env, []},
+  {mod, {p1_utils, []}},
 
   %% hex.pm packaging:
   {licenses, ["Apache 2.0"]},
