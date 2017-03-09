@@ -146,7 +146,7 @@ out_ram_test() ->
 out_file_test() ->
     Q = p1_queue:new(file),
     Q1 = p1_queue:in(1, Q),
-    ?assertMatch({{value, 1}, Q}, p1_queue:out(Q1)),
+    ?assertMatch({{value, 1}, Q2} when ?qlen(Q2) == 0, p1_queue:out(Q1)),
     ?assertEqual(ok, p1_file_queue:close(Q1)).
 
 out_empty_ram_test() ->
@@ -180,7 +180,7 @@ drop_ram_test() ->
 drop_file_test() ->
     Q = p1_queue:new(file),
     Q1 = p1_queue:in(1, Q),
-    ?assertEqual(Q, p1_queue:drop(Q1)),
+    ?assertMatch(Q2 when ?qlen(Q2) == 0, p1_queue:drop(Q1)),
     ?assertEqual(ok, p1_file_queue:close(Q1)).
 
 drop_empty_ram_test() ->

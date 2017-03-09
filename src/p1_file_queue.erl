@@ -60,6 +60,8 @@ len(#file_q{len = Len}) ->
 is_empty(#file_q{len = Len}) ->
     Len == 0.
 
+in(Item, #file_q{head = Pos, tail = Pos} = Q) when Pos /= 0 ->
+    in(Item, clear(Q));
 in(Item, #file_q{fd = Fd, len = Len, tail = Pos} = Q) ->
     Data = term_to_binary(Item),
     Size = size(Data),
@@ -75,11 +77,7 @@ out(#file_q{len = 0} = Q) ->
 out(#file_q{fd = Fd, len = Len, head = Pos} = Q) ->
     case read_item(Fd, Pos) of
 	{ok, Item, Next} ->
-	    if Len == 1 ->
-		    {{value, Item}, clear(Q)};
-	       true ->
-		    {{value, Item}, Q#file_q{len = Len - 1, head = Next}}
-	    end;
+	    {{value, Item}, Q#file_q{len = Len - 1, head = Next}};
 	{error, Err} ->
 	    erlang:error(Err)
     end.
@@ -99,11 +97,7 @@ drop(#file_q{len = 0}) ->
 drop(#file_q{fd = Fd, head = Pos, len = Len} = Q) ->
     case read_item_size(Fd, Pos) of
 	{ok, Size} ->
-	    if Len == 1 ->
-		    clear(Q);
-	       true ->
-		    Q#file_q{len = Len - 1, head = Pos + Size + 4}
-	    end;
+	    Q#file_q{len = Len - 1, head = Pos + Size + 4};
 	{error, Err} ->
 	    erlang:error(Err)
     end.
