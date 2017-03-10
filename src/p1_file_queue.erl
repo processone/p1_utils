@@ -26,8 +26,9 @@
 		counter :: pos_integer(),
 		files :: map()}).
 
+-type error_reason() :: {corrupted | file:posix(), binary()}.
 -type queue() :: #file_q{}.
--export_type([queue/0]).
+-export_type([queue/0, error_reason/0]).
 
 -define(MAX_QUEUES_PER_PROCESS, 10).
 
@@ -42,7 +43,7 @@ new() ->
 		    monitor_me(Path),
 		    clear(#file_q{fd = Fd, path = Path});
 		{error, Err} ->
-		    erlang:error(Err)
+		    erlang:error({bad_queue, {Err, Path}})
 	    end;
 	{error, Err} ->
 	    erlang:error(Err)
@@ -60,6 +61,15 @@ len(#file_q{tail = Tail}) ->
 is_empty(#file_q{tail = Tail}) ->
     Tail == 0.
 
+%%
+%% This is the only operation with side-effects, thus if you call
+%% this function on a queue and get the new queue as a result,
+%% you *MUST NOT* use the original queue, e.g. the following
+%% is potientailly dangerous:
+%%    Q2 = p1_queue:in(some, Q1),
+%%    p1_queue:out(Q1)
+%%    ... likely an exception occurs here ...
+%%
 in(Item, #file_q{start = Pos, stop = Pos} = Q) when Pos /= 0 ->
     in(Item, clear(Q));
 in(Item, #file_q{fd = Fd, tail = Tail, stop = Pos} = Q) ->
@@ -69,7 +79,7 @@ in(Item, #file_q{fd = Fd, tail = Tail, stop = Pos} = Q) ->
 	ok ->
 	    gc(Q#file_q{tail = Tail + 1, stop = Pos + Size + 4});
 	{error, Err} ->
-	    erlang:error(Err)
+	    erlang:error({bad_queue, {Err, Q#file_q.path}})
     end.
 
 out(#file_q{tail = 0} = Q) ->
@@ -80,17 +90,17 @@ out(#file_q{fd = Fd, tail = Tail, head = Head, start = Pos} = Q) ->
 	    {{value, Item},
 	     Q#file_q{tail = Tail - 1, head = Head + 1, start = Next}};
 	{error, Err} ->
-	    erlang:error(Err)
+	    erlang:error({bad_queue, {Err, Q#file_q.path}})
     end.
 
 peek(#file_q{tail = 0}) ->
     empty;
-peek(#file_q{fd = Fd, start = Pos}) ->
+peek(#file_q{fd = Fd, start = Pos} = Q) ->
     case read_item(Fd, Pos) of
 	{ok, Item, _} ->
 	    {value, Item};
 	{error, Err} ->
-	    erlang:error(Err)
+	    erlang:error({bad_queue, {Err, Q#file_q.path}})
     end.
 
 drop(#file_q{tail = 0}) ->
@@ -100,11 +110,11 @@ drop(#file_q{fd = Fd, start = Pos, tail = Tail, head = Head} = Q) ->
 	{ok, Size} ->
 	    Q#file_q{tail = Tail - 1, head = Head + 1, start = Pos + Size + 4};
 	{error, Err} ->
-	    erlang:error(Err)
+	    erlang:error({bad_queue, {Err, Q#file_q.path}})
     end.
 
 from_list(Items) ->
-    Q = #file_q{fd = Fd} = new(),
+    Q = #file_q{fd = Fd, path = Path} = new(),
     {Tail, Stop} = lists:foldl(
 		    fun(Item, {Len, Pos}) ->
 			    Data = term_to_binary(Item),
@@ -113,13 +123,16 @@ from_list(Items) ->
 				ok ->
 				    {Len + 1, Pos + Size + 4};
 				{error, Err} ->
-				    erlang:error(Err)
+				    erlang:error({bad_queue, {Err, Path}})
 			    end
 		    end, {0, 0}, Items),
     Q#file_q{tail = Tail, stop = Stop}.
 
-to_list(#file_q{fd = Fd, tail = Tail, start = Pos}) ->
-    to_list(Fd, Pos, Tail, []).
+to_list(#file_q{fd = Fd, tail = Tail, start = Pos} = Q) ->
+    case to_list(Fd, Pos, Tail, []) of
+	{ok, L} -> L;
+	{error, Err} -> erlang:error({bad_queue, {Err, Q#file_q.path}})
+    end.
 
 dropwhile(F, Q) ->
     case peek(Q) of
@@ -159,22 +172,26 @@ clear(#file_q{fd = Fd, path = Path}) ->
 		ok ->
 		    #file_q{fd = Fd, path = Path};
 		{error, Err} ->
-		    erlang:error(Err)
+		    erlang:error({bad_queue, {Err, Path}})
 	    end;
 	{error, Err} ->
-	    erlang:error(Err)
+	    erlang:error({bad_queue, {Err, Path}})
     end.
 
 close(#file_q{fd = Fd, path = Path}) ->
     file:close(Fd),
     demonitor_me(Path).
 
-format_error(empty) ->
-    "file queue empty";
-format_error(corrupted) ->
-    "file queue corrupted";
-format_error(Posix) ->
-    file:format_error(Posix).
+-spec format_error(error_reason()) -> string().
+format_error({corrupted, Path}) ->
+    "file queue is corrupted (" ++ binary_to_list(Path) ++ ")";
+format_error({Posix, Path}) ->
+    case file:format_error(Posix) of
+	"unknown POSIX error" ->
+	    atom_to_list(Posix) ++ " (" ++ binary_to_list(Path) ++ ")";
+	Reason ->
+	    Reason ++ " (" ++ binary_to_list(Path) ++ ")"
+    end.
 
 %%%===================================================================
 %%% p1_server API
@@ -210,7 +227,7 @@ handle_call({get_filename, Owner}, _, #state{dir = Dir} = State) ->
 	    {reply, {error, emfile}, State};
        true ->
 	    Counter = State#state.counter + 1,
-	    Path = filename:join(Dir, integer_to_list(Counter)),
+	    Path = iolist_to_binary(filename:join(Dir, integer_to_list(Counter))),
 	    {reply, {ok, Path}, State#state{counter = Counter}}
     end;
 handle_call(_Request, _From, State) ->
@@ -304,13 +321,13 @@ read_item(Fd, Pos) ->
     end.
 
 to_list(_Fd, _Pos, 0, Items) ->
-    lists:reverse(Items);
+    {ok, lists:reverse(Items)};
 to_list(Fd, Pos, Len, Items) ->
     case read_item(Fd, Pos) of
 	{ok, Item, NextPos} ->
 	    to_list(Fd, NextPos, Len-1, [Item|Items]);
-	{error, Err} ->
-	    erlang:error(Err)
+	{error, _} = Err ->
+	    Err
     end.
 
 -define(MAX_HEAD, 1000).
@@ -329,9 +346,9 @@ gc(#file_q{fd = Fd, path = Path,
                 #file_q{fd = NewFd, start = 0, stop = Stop - Start,
                         head = 0, tail = Tail, path = Path}
             catch _:{badmatch, {error, Err}} ->
-                    erlang:error(Err);
+                    erlang:error({bad_queue, {Err, Path}});
                   _:{badmatch, eof} ->
-                    erlang:error(corrupted)
+                    erlang:error({bad_queue, {corrupted, Path}})
             end;
        true ->
             Q

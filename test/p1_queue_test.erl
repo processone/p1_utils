@@ -157,6 +157,13 @@ out_empty_file_test() ->
     ?assertMatch({empty, Q}, p1_queue:out(Q)),
     ?assertEqual(ok, p1_file_queue:close(Q)).
 
+clear_in_test() ->
+    Q = p1_queue:from_list([1], file),
+    Q1 = p1_queue:drop(Q),
+    Q2 = p1_queue:in(2, Q1),
+    ?assertEqual([2], p1_queue:to_list(Q2)),
+    ?assertEqual(ok, p1_file_queue:close(Q2)).
+
 peek_ram_test() ->
     Q = p1_queue:from_list([1], ram),
     ?assertEqual({value, 1}, p1_queue:peek(Q)).
@@ -250,6 +257,7 @@ ram_to_file_test() ->
     RQ = p1_queue:from_list(L, ram),
     FQ = p1_queue:ram_to_file(RQ),
     ?assertEqual(L, p1_file_queue:to_list(FQ)),
+    ?assertEqual(FQ, p1_queue:ram_to_file(FQ)),
     ?assertEqual(ok, p1_file_queue:close(FQ)).
 
 file_to_ram_test() ->
@@ -257,66 +265,68 @@ file_to_ram_test() ->
     FQ = p1_queue:from_list(L, file),
     RQ = p1_queue:file_to_ram(FQ),
     ?assertEqual(L, p1_queue:to_list(RQ)),
+    ?assertEqual(RQ, p1_queue:file_to_ram(RQ)),
     ?assertEqual(ok, p1_file_queue:close(FQ)).
 
 format_error_test() ->
-    Unknown = "unknown POSIX error",
-    ?assertEqual(Unknown, p1_queue:format_error(foo1234)),
-    ?assertNotEqual(Unknown, p1_queue:format_error(empty)),
-    ?assertNotEqual(Unknown, p1_queue:format_error(corrupted)).
+    Path = "/path/to/queue",
+    ?assertEqual("foo1234 (" ++ Path ++ ")",
+		 p1_queue:format_error({foo1234, list_to_binary(Path)})),
+    ?assertNotEqual("corrupted (" ++ Path ++ ")",
+		    p1_queue:format_error({corrupted, list_to_binary(Path)})).
 
 bad_size_test() ->
-    #file_q{fd = Fd} = Q = p1_queue:from_list([1], file),
+    #file_q{fd = Fd, path = Path} = Q = p1_queue:from_list([1], file),
     ?assertMatch({ok, _}, file:position(Fd, 0)),
     ?assertEqual(ok, file:truncate(Fd)),
     ?assertEqual(ok, file:pwrite(Fd, 0, <<1>>)),
-    ?assertError(corrupted, p1_queue:out(Q)),
-    ?assertError(corrupted, p1_queue:peek(Q)),
-    ?assertError(corrupted, p1_queue:drop(Q)),
-    ?assertError(corrupted, p1_queue:to_list(Q)),
-    ?assertError(corrupted, p1_queue:dropwhile(fun(_) -> true end, Q)),
-    ?assertError(corrupted, p1_queue:foreach(fun(_) -> ok end, Q)),
-    ?assertError(corrupted, p1_queue:foldl(fun(_, _) -> ok end, ok, Q)),
+    ?assertError({bad_queue, {corrupted, Path}}, p1_queue:out(Q)),
+    ?assertError({bad_queue, {corrupted, Path}}, p1_queue:peek(Q)),
+    ?assertError({bad_queue, {corrupted, Path}}, p1_queue:drop(Q)),
+    ?assertError({bad_queue, {corrupted, Path}}, p1_queue:to_list(Q)),
+    ?assertError({bad_queue, {corrupted, Path}}, p1_queue:dropwhile(fun(_) -> true end, Q)),
+    ?assertError({bad_queue, {corrupted, Path}}, p1_queue:foreach(fun(_) -> ok end, Q)),
+    ?assertError({bad_queue, {corrupted, Path}}, p1_queue:foldl(fun(_, _) -> ok end, ok, Q)),
     ?assertEqual(ok, p1_file_queue:close(Q)).
 
 eof_test() ->
-    #file_q{fd = Fd} = Q = p1_queue:from_list([1], file),
+    #file_q{fd = Fd, path = Path} = Q = p1_queue:from_list([1], file),
     ?assertMatch({ok, _}, file:position(Fd, 0)),
     ?assertEqual(ok, file:truncate(Fd)),
     ?assertEqual(ok, file:pwrite(Fd, 0, <<1:32>>)),
-    ?assertError(corrupted, p1_queue:out(Q)),
-    ?assertError(corrupted, p1_queue:peek(Q)),
-    ?assertError(corrupted, p1_queue:to_list(Q)),
-    ?assertError(corrupted, p1_queue:dropwhile(fun(_) -> true end, Q)),
-    ?assertError(corrupted, p1_queue:foreach(fun(_) -> ok end, Q)),
-    ?assertError(corrupted, p1_queue:foldl(fun(_, _) -> ok end, ok, Q)),
+    ?assertError({bad_queue, {corrupted, Path}}, p1_queue:out(Q)),
+    ?assertError({bad_queue, {corrupted, Path}}, p1_queue:peek(Q)),
+    ?assertError({bad_queue, {corrupted, Path}}, p1_queue:to_list(Q)),
+    ?assertError({bad_queue, {corrupted, Path}}, p1_queue:dropwhile(fun(_) -> true end, Q)),
+    ?assertError({bad_queue, {corrupted, Path}}, p1_queue:foreach(fun(_) -> ok end, Q)),
+    ?assertError({bad_queue, {corrupted, Path}}, p1_queue:foldl(fun(_, _) -> ok end, ok, Q)),
     ?assertEqual(ok, p1_file_queue:close(Q)).
 
 bad_term_test() ->
-    #file_q{fd = Fd} = Q = p1_queue:from_list([1], file),
+    #file_q{fd = Fd, path = Path} = Q = p1_queue:from_list([1], file),
     ?assertMatch({ok, _}, file:position(Fd, 0)),
     ?assertEqual(ok, file:truncate(Fd)),
     ?assertEqual(ok, file:pwrite(Fd, 0, <<5:32, 1>>)),
-    ?assertError(corrupted, p1_queue:out(Q)),
-    ?assertError(corrupted, p1_queue:peek(Q)),
-    ?assertError(corrupted, p1_queue:to_list(Q)),
-    ?assertError(corrupted, p1_queue:dropwhile(fun(_) -> true end, Q)),
-    ?assertError(corrupted, p1_queue:foreach(fun(_) -> ok end, Q)),
-    ?assertError(corrupted, p1_queue:foldl(fun(_, _) -> ok end, ok, Q)),
+    ?assertError({bad_queue, {corrupted, Path}}, p1_queue:out(Q)),
+    ?assertError({bad_queue, {corrupted, Path}}, p1_queue:peek(Q)),
+    ?assertError({bad_queue, {corrupted, Path}}, p1_queue:to_list(Q)),
+    ?assertError({bad_queue, {corrupted, Path}}, p1_queue:dropwhile(fun(_) -> true end, Q)),
+    ?assertError({bad_queue, {corrupted, Path}}, p1_queue:foreach(fun(_) -> ok end, Q)),
+    ?assertError({bad_queue, {corrupted, Path}}, p1_queue:foldl(fun(_, _) -> ok end, ok, Q)),
     ?assertEqual(ok, p1_file_queue:close(Q)).
 
 closed_test() ->
-    Q = p1_queue:from_list([1], file),
+    #file_q{path = Path} = Q = p1_queue:from_list([1], file),
     ?assertEqual(ok, p1_file_queue:close(Q)),
-    ?assertError(einval, p1_queue:in(2, Q)),
-    ?assertError(einval, p1_queue:out(Q)),
-    ?assertError(einval, p1_queue:peek(Q)),
-    ?assertError(einval, p1_queue:drop(Q)),
-    ?assertError(einval, p1_queue:to_list(Q)),
-    ?assertError(einval, p1_queue:dropwhile(fun(_) -> true end, Q)),
-    ?assertError(einval, p1_queue:foreach(fun(_) -> ok end, Q)),
-    ?assertError(einval, p1_queue:foldl(fun(_, _) -> ok end, ok, Q)),
-    ?assertError(einval, p1_file_queue:clear(Q)),
+    ?assertError({bad_queue, {einval, Path}}, p1_queue:in(2, Q)),
+    ?assertError({bad_queue, {einval, Path}}, p1_queue:out(Q)),
+    ?assertError({bad_queue, {einval, Path}}, p1_queue:peek(Q)),
+    ?assertError({bad_queue, {einval, Path}}, p1_queue:drop(Q)),
+    ?assertError({bad_queue, {einval, Path}}, p1_queue:to_list(Q)),
+    ?assertError({bad_queue, {einval, Path}}, p1_queue:dropwhile(fun(_) -> true end, Q)),
+    ?assertError({bad_queue, {einval, Path}}, p1_queue:foreach(fun(_) -> ok end, Q)),
+    ?assertError({bad_queue, {einval, Path}}, p1_queue:foldl(fun(_, _) -> ok end, ok, Q)),
+    ?assertError({bad_queue, {einval, Path}}, p1_file_queue:clear(Q)),
     ?assertEqual(ok, p1_file_queue:close(Q)).
 
 write_fail_test() ->
@@ -325,8 +335,8 @@ write_fail_test() ->
     %% Open file in read-only mode, so write operations fail
     {ok, NewFd} = file:open(Path, [read, binary, raw]),
     Q1 = Q#file_q{fd = NewFd},
-    ?assertError(ebadf, p1_queue:in(1, Q1)),
-    ?assertError(einval, p1_file_queue:clear(Q1)),
+    ?assertError({bad_queue, {ebadf, Path}}, p1_queue:in(1, Q1)),
+    ?assertError({bad_queue, {einval, Path}}, p1_file_queue:clear(Q1)),
     ?assertEqual(ok, p1_file_queue:close(Q1)).
 
 monitor_test() ->
@@ -341,6 +351,21 @@ gc_test() ->
     Q2 = p1_queue:in(1002, Q1),
     ?assertMatch(#file_q{head = 0, tail = 2}, Q2),
     ?assertEqual(ok, p1_file_queue:close(Q2)).
+
+destruction_test() ->
+    %% Check if drop/1 and out/1 don't destruct original queue
+    Q = p1_queue:from_list([1], file),
+    p1_queue:drop(Q),
+    ?assertMatch({_, _}, p1_queue:out(Q)),
+    ?assertEqual(true, p1_queue:is_queue(Q)),
+    ?assertEqual(1, p1_queue:len(Q)),
+    ?assertEqual(false, p1_queue:is_empty(Q)),
+    ?assertEqual({value, 1}, p1_queue:peek(Q)),
+    ?assertEqual([1], p1_queue:to_list(Q)),
+    ?assertEqual(Q, p1_queue:dropwhile(fun(_) -> false end, Q)),
+    ?assertEqual([1], p1_queue:foldl(fun(X, Acc) -> [X|Acc] end, [], Q)),
+    ?assertEqual(ok, p1_queue:foreach(fun(_) -> ok end, Q)),
+    ?assertEqual(ok, p1_file_queue:close(Q)).
 
 emfile_test() ->
     _ = [p1_queue:new(file) || _ <- lists:seq(1, 10)],
@@ -362,11 +387,11 @@ start_eacces_test() ->
     ?assertMatch(ok, p1_queue:start(eacces_dir())).
 
 new_eacces_test() ->
-    ?assertError(eacces, p1_queue:new(file)).
+    ?assertError({bad_queue, {eacces, _}}, p1_queue:new(file)).
 
 from_list_eacces_test() ->
     L = mk_list(),
-    ?assertError(eacces, p1_queue:from_list(L, file)).
+    ?assertError({bad_queue, {eacces, _}}, p1_queue:from_list(L, file)).
 
 stop_eaccess_test() ->
     ?assertEqual(ok, p1_queue:stop()).

@@ -19,7 +19,8 @@
 -type fqueue() :: p1_file_queue:queue().
 -type queue() :: rqueue() | fqueue().
 -type queue_type() :: ram | file.
--export_type([queue/0, queue_type/0]).
+-type error_reason() :: p1_file_queue:error_reason().
+-export_type([queue/0, queue_type/0, error_reason/0]).
 
 %%%===================================================================
 %%% API
@@ -177,6 +178,7 @@ file_to_ram({_, _} = Q) ->
 file_to_ram(Q) ->
     p1_file_queue:foldl(fun in/2, new(ram), Q).
 
+-spec format_error(error_reason()) -> string().
 format_error(Reason) ->
     p1_file_queue:format_error(Reason).
 
