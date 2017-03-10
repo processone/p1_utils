@@ -12,7 +12,8 @@
 -export([new/0, new/1, new/2, is_queue/1, len/1, is_empty/1, in/2, out/1,
 	 peek/1, drop/1, from_list/1, from_list/2, from_list/3,
 	 to_list/1, clear/1, foreach/2, foldl/3, dropwhile/2, type/1,
-	 format_error/1, ram_to_file/1, file_to_ram/1, limit/1]).
+	 format_error/1, ram_to_file/1, file_to_ram/1, get_limit/1,
+	 set_limit/2]).
 -export([start/1, stop/0]).
 
 -type limit() :: non_neg_integer() | unlimited.
@@ -22,8 +23,6 @@
 -type queue_type() :: ram | file.
 -type error_reason() :: p1_file_queue:error_reason().
 -export_type([queue/0, queue_type/0, error_reason/0]).
-
--define(unlimited, unlimited).
 
 %%%===================================================================
 %%% API
@@ -48,7 +47,7 @@ new() ->
 -spec new(ram) -> rqueue();
 	 (file) -> fqueue().
 new(Type) ->
-    new(Type, ?unlimited).
+    new(Type, unlimited).
 
 -spec new(ram, limit()) -> rqueue();
 	 (file, limit()) -> fqueue().
@@ -81,11 +80,18 @@ is_empty({_, Len, _}) ->
 is_empty(Q) ->
     p1_file_queue:is_empty(Q).
 
--spec limit(queue()) -> limit().
-limit({_, _, Limit}) ->
+-spec get_limit(queue()) -> limit().
+get_limit({_, _, Limit}) ->
     Limit;
-limit(Q) ->
-    p1_file_queue:limit(Q).
+get_limit(Q) ->
+    p1_file_queue:get_limit(Q).
+
+-spec set_limit(rqueue(), limit()) -> rqueue();
+	       (fqueue(), limit()) -> fqueue().
+set_limit({Q, Len, _}, Limit) ->
+    {Q, Len, Limit};
+set_limit(Q, Limit) ->
+    p1_file_queue:set_limit(Q, Limit).
 
 -spec in(term(), rqueue()) -> rqueue();
 	(term(), fqueue()) -> fqueue().
@@ -123,12 +129,12 @@ drop(Q) ->
 
 -spec from_list(list()) -> rqueue().
 from_list(L) ->
-    from_list(L, ram, ?unlimited).
+    from_list(L, ram, unlimited).
 
 -spec from_list(list(), ram) -> rqueue();
 	       (list(), file) -> fqueue().
 from_list(L, Type) ->
-    from_list(L, Type, ?unlimited).
+    from_list(L, Type, unlimited).
 
 -spec from_list(list(), ram, limit()) -> rqueue();
 	       (list(), file, limit()) -> fqueue().
@@ -204,7 +210,7 @@ ram_to_file(Q) ->
 file_to_ram({_, _, _} = Q) ->
     Q;
 file_to_ram(Q) ->
-    Limit = p1_file_queue:limit(Q),
+    Limit = p1_file_queue:get_limit(Q),
     p1_file_queue:foldl(fun in/2, new(ram, Limit), Q).
 
 -spec format_error(error_reason()) -> string().

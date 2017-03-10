@@ -164,14 +164,26 @@ clear_in_test() ->
     ?assertEqual([2], p1_queue:to_list(Q2)),
     ?assertEqual(ok, p1_file_queue:close(Q2)).
 
-limit_ram_test() ->
+get_limit_ram_test() ->
     Q = p1_queue:from_list(mk_list(), ram, 10),
-    ?assertEqual(10, p1_queue:limit(Q)),
+    ?assertEqual(10, p1_queue:get_limit(Q)),
     ?assertError(full, p1_queue:in(11, Q)).
-limit_file_test() ->
+get_limit_file_test() ->
     Q = p1_queue:from_list(mk_list(), file, 10),
-    ?assertEqual(10, p1_queue:limit(Q)),
+    ?assertEqual(10, p1_queue:get_limit(Q)),
     ?assertError(full, p1_queue:in(11, Q)),
+    ?assertEqual(ok, p1_file_queue:close(Q)).
+
+set_limit_ram_test() ->
+    Q = p1_queue:new(ram),
+    ?assertEqual(unlimited, p1_queue:get_limit(Q)),
+    Q1 = p1_queue:set_limit(Q, 10),
+    ?assertEqual(10, p1_queue:get_limit(Q1)).
+set_limit_file_test() ->
+    Q = p1_queue:new(file),
+    ?assertEqual(unlimited, p1_queue:get_limit(Q)),
+    Q1 = p1_queue:set_limit(Q, 10),
+    ?assertEqual(10, p1_queue:get_limit(Q1)),
     ?assertEqual(ok, p1_file_queue:close(Q)).
 
 from_list_limit_ram_test() ->

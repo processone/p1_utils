@@ -11,8 +11,8 @@
 -behaviour(p1_server).
 
 %% API
--export([new/1, is_queue/1, len/1, is_empty/1, limit/1, in/2, out/1,
-	 peek/1, drop/1, from_list/2, to_list/1, foreach/2,
+-export([new/1, is_queue/1, len/1, is_empty/1, get_limit/1, set_limit/2,
+	 in/2, out/1, peek/1, drop/1, from_list/2, to_list/1, foreach/2,
 	 foldl/3, dropwhile/2, path/1, clear/1, format_error/1]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
 	 terminate/2, code_change/3]).
@@ -61,8 +61,11 @@ len(#file_q{tail = Tail}) ->
 is_empty(#file_q{tail = Tail}) ->
     Tail == 0.
 
-limit(#file_q{limit = Limit}) ->
+get_limit(#file_q{limit = Limit}) ->
     Limit.
+
+set_limit(Q, Limit) ->
+    Q#file_q{limit = Limit}.
 
 %%
 %% This is the only operation with side-effects, thus if you call
