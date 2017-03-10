@@ -11,8 +11,8 @@
 -behaviour(p1_server).
 
 %% API
--export([new/0, is_queue/1, len/1, is_empty/1, in/2, out/1,
-	 peek/1, drop/1, from_list/1, to_list/1, foreach/2,
+-export([new/1, is_queue/1, len/1, is_empty/1, limit/1, in/2, out/1,
+	 peek/1, drop/1, from_list/2, to_list/1, foreach/2,
 	 foldl/3, dropwhile/2, path/1, clear/1, format_error/1]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
 	 terminate/2, code_change/3]).
@@ -35,13 +35,13 @@
 %%%===================================================================
 %%% API
 %%%===================================================================
-new() ->
+new(Limit) ->
     case get_filename() of
 	{ok, Path} ->
 	    case file:open(Path, [read, write, binary, raw]) of
 		{ok, Fd} ->
 		    monitor_me(Path),
-		    clear(#file_q{fd = Fd, path = Path});
+		    clear(#file_q{fd = Fd, path = Path, limit = Limit});
 		{error, Err} ->
 		    erlang:error({bad_queue, {Err, Path}})
 	    end;
@@ -61,6 +61,9 @@ len(#file_q{tail = Tail}) ->
 is_empty(#file_q{tail = Tail}) ->
     Tail == 0.
 
+limit(#file_q{limit = Limit}) ->
+    Limit.
+
 %%
 %% This is the only operation with side-effects, thus if you call
 %% this function on a queue and get the new queue as a result,
@@ -72,7 +75,8 @@ is_empty(#file_q{tail = Tail}) ->
 %%
 in(Item, #file_q{start = Pos, stop = Pos} = Q) when Pos /= 0 ->
     in(Item, clear(Q));
-in(Item, #file_q{fd = Fd, tail = Tail, stop = Pos} = Q) ->
+in(Item, #file_q{fd = Fd, tail = Tail, stop = Pos, limit = Limit} = Q)
+  when Tail < Limit ->
     Data = term_to_binary(Item),
     Size = size(Data),
     case file:pwrite(Fd, Pos, <<Size:32, Data/binary>>) of
@@ -80,7 +84,9 @@ in(Item, #file_q{fd = Fd, tail = Tail, stop = Pos} = Q) ->
 	    gc(Q#file_q{tail = Tail + 1, stop = Pos + Size + 4});
 	{error, Err} ->
 	    erlang:error({bad_queue, {Err, Q#file_q.path}})
-    end.
+    end;
+in(_, _) ->
+    erlang:error(full).
 
 out(#file_q{tail = 0} = Q) ->
     {empty, Q};
@@ -113,20 +119,10 @@ drop(#file_q{fd = Fd, start = Pos, tail = Tail, head = Head} = Q) ->
 	    erlang:error({bad_queue, {Err, Q#file_q.path}})
     end.
 
-from_list(Items) ->
-    Q = #file_q{fd = Fd, path = Path} = new(),
-    {Tail, Stop} = lists:foldl(
-		    fun(Item, {Len, Pos}) ->
-			    Data = term_to_binary(Item),
-			    Size = size(Data),
-			    case file:write(Fd, <<Size:32, Data/binary>>) of
-				ok ->
-				    {Len + 1, Pos + Size + 4};
-				{error, Err} ->
-				    erlang:error({bad_queue, {Err, Path}})
-			    end
-		    end, {0, 0}, Items),
-    Q#file_q{tail = Tail, stop = Stop}.
+from_list(Items, Limit) when length(Items) =< Limit ->
+    lists:foldl(fun in/2, new(Limit), Items);
+from_list(_, _) ->
+    erlang:error(full).
 
 to_list(#file_q{fd = Fd, tail = Tail, start = Pos} = Q) ->
     case to_list(Fd, Pos, Tail, []) of
@@ -165,12 +161,12 @@ foreach(F, Q) ->
 	    ok
     end.
 
-clear(#file_q{fd = Fd, path = Path}) ->
+clear(#file_q{fd = Fd, path = Path, limit = Limit}) ->
     case file:position(Fd, 0) of
 	{ok, 0} ->
 	    case file:truncate(Fd) of
 		ok ->
-		    #file_q{fd = Fd, path = Path};
+		    #file_q{fd = Fd, path = Path, limit = Limit};
 		{error, Err} ->
 		    erlang:error({bad_queue, {Err, Path}})
 	    end;
@@ -332,7 +328,7 @@ to_list(Fd, Pos, Len, Items) ->
 
 -define(MAX_HEAD, 1000).
 %% @doc shrink head when there are more than MAX_HEAD elements in the head
-gc(#file_q{fd = Fd, path = Path,
+gc(#file_q{fd = Fd, path = Path, limit = Limit,
 	   tail = Tail, head = Head,
 	   start = Start, stop = Stop} = Q) ->
     if Head >= ?MAX_HEAD, Stop > Start ->
@@ -344,7 +340,7 @@ gc(#file_q{fd = Fd, path = Path,
                 {ok, _} = file:position(NewFd, Stop - Start),
                 ok = file:truncate(NewFd),
                 #file_q{fd = NewFd, start = 0, stop = Stop - Start,
-                        head = 0, tail = Tail, path = Path}
+                        head = 0, tail = Tail, path = Path, limit = Limit}
             catch _:{badmatch, {error, Err}} ->
                     erlang:error({bad_queue, {Err, Path}});
                   _:{badmatch, eof} ->
