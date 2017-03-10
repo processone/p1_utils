@@ -319,6 +319,15 @@ monitor_test() ->
     %% Check if 'DOWN' messages is correctly processed
     spawn(fun() -> p1_queue:new(file) end).
 
+gc_test() ->
+    Q = p1_queue:from_list(lists:seq(1, 1001), file),
+    Q1 = p1_queue:dropwhile(fun(X) -> X =< 1000 end, Q),
+    ?assertMatch(#file_q{head = 1000, tail = 1}, Q1),
+    %% GC should be called here
+    Q2 = p1_queue:in(1002, Q1),
+    ?assertMatch(#file_q{head = 0, tail = 2}, Q2),
+    ?assertEqual(ok, p1_file_queue:close(Q2)).
+
 emfile_test() ->
     _ = [p1_queue:new(file) || _ <- lists:seq(1, 10)],
     ?assertError(emfile, p1_queue:new(file)).

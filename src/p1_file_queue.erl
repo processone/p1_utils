@@ -54,37 +54,38 @@ path(#file_q{path = Path}) ->
 is_queue(#file_q{}) -> true;
 is_queue(_) -> false.
 
-len(#file_q{len = Len}) ->
-    Len.
+len(#file_q{tail = Tail}) ->
+    Tail.
 
-is_empty(#file_q{len = Len}) ->
-    Len == 0.
+is_empty(#file_q{tail = Tail}) ->
+    Tail == 0.
 
-in(Item, #file_q{head = Pos, tail = Pos} = Q) when Pos /= 0 ->
+in(Item, #file_q{start = Pos, stop = Pos} = Q) when Pos /= 0 ->
     in(Item, clear(Q));
-in(Item, #file_q{fd = Fd, len = Len, tail = Pos} = Q) ->
+in(Item, #file_q{fd = Fd, tail = Tail, stop = Pos} = Q) ->
     Data = term_to_binary(Item),
     Size = size(Data),
     case file:pwrite(Fd, Pos, <<Size:32, Data/binary>>) of
 	ok ->
-	    Q#file_q{len = Len + 1, tail = Pos + Size + 4};
+	    gc(Q#file_q{tail = Tail + 1, stop = Pos + Size + 4});
 	{error, Err} ->
 	    erlang:error(Err)
     end.
 
-out(#file_q{len = 0} = Q) ->
+out(#file_q{tail = 0} = Q) ->
     {empty, Q};
-out(#file_q{fd = Fd, len = Len, head = Pos} = Q) ->
+out(#file_q{fd = Fd, tail = Tail, head = Head, start = Pos} = Q) ->
     case read_item(Fd, Pos) of
 	{ok, Item, Next} ->
-	    {{value, Item}, Q#file_q{len = Len - 1, head = Next}};
+	    {{value, Item},
+	     Q#file_q{tail = Tail - 1, head = Head + 1, start = Next}};
 	{error, Err} ->
 	    erlang:error(Err)
     end.
 
-peek(#file_q{len = 0}) ->
+peek(#file_q{tail = 0}) ->
     empty;
-peek(#file_q{fd = Fd, head = Pos}) ->
+peek(#file_q{fd = Fd, start = Pos}) ->
     case read_item(Fd, Pos) of
 	{ok, Item, _} ->
 	    {value, Item};
@@ -92,33 +93,33 @@ peek(#file_q{fd = Fd, head = Pos}) ->
 	    erlang:error(Err)
     end.
 
-drop(#file_q{len = 0}) ->
+drop(#file_q{tail = 0}) ->
     erlang:error(empty);
-drop(#file_q{fd = Fd, head = Pos, len = Len} = Q) ->
+drop(#file_q{fd = Fd, start = Pos, tail = Tail, head = Head} = Q) ->
     case read_item_size(Fd, Pos) of
 	{ok, Size} ->
-	    Q#file_q{len = Len - 1, head = Pos + Size + 4};
+	    Q#file_q{tail = Tail - 1, head = Head + 1, start = Pos + Size + 4};
 	{error, Err} ->
 	    erlang:error(Err)
     end.
 
 from_list(Items) ->
     Q = #file_q{fd = Fd} = new(),
-    {Len, Tail} = lists:foldl(
-		    fun(Item, {L, Pos}) ->
+    {Tail, Stop} = lists:foldl(
+		    fun(Item, {Len, Pos}) ->
 			    Data = term_to_binary(Item),
 			    Size = size(Data),
 			    case file:write(Fd, <<Size:32, Data/binary>>) of
 				ok ->
-				    {L + 1, Pos + Size + 4};
+				    {Len + 1, Pos + Size + 4};
 				{error, Err} ->
 				    erlang:error(Err)
 			    end
 		    end, {0, 0}, Items),
-    Q#file_q{len = Len, tail = Tail}.
+    Q#file_q{tail = Tail, stop = Stop}.
 
-to_list(#file_q{fd = Fd, len = Len, head = Pos}) ->
-    to_list(Fd, Pos, Len, []).
+to_list(#file_q{fd = Fd, tail = Tail, start = Pos}) ->
+    to_list(Fd, Pos, Tail, []).
 
 dropwhile(F, Q) ->
     case peek(Q) of
@@ -310,4 +311,28 @@ to_list(Fd, Pos, Len, Items) ->
 	    to_list(Fd, NextPos, Len-1, [Item|Items]);
 	{error, Err} ->
 	    erlang:error(Err)
+    end.
+
+-define(MAX_HEAD, 1000).
+%% @doc shrink head when there are more than MAX_HEAD elements in the head
+gc(#file_q{fd = Fd, path = Path,
+	   tail = Tail, head = Head,
+	   start = Start, stop = Stop} = Q) ->
+    if Head >= ?MAX_HEAD, Stop > Start ->
+            try
+                {ok, NewFd} = file:open(Path, [read, write, raw, binary]),
+                {ok, _} = file:position(Fd, Start),
+                {ok, _} = file:copy(Fd, NewFd, Stop - Start),
+                file:close(Fd),
+                {ok, _} = file:position(NewFd, Stop - Start),
+                ok = file:truncate(NewFd),
+                #file_q{fd = NewFd, start = 0, stop = Stop - Start,
+                        head = 0, tail = Tail, path = Path}
+            catch _:{badmatch, {error, Err}} ->
+                    erlang:error(Err);
+                  _:{badmatch, eof} ->
+                    erlang:error(corrupted)
+            end;
+       true ->
+            Q
     end.
