@@ -11,7 +11,8 @@
 %% API
 -export([new/0, new/1, is_queue/1, len/1, is_empty/1, in/2, out/1,
 	 peek/1, drop/1, from_list/1, from_list/2, to_list/1, clear/1,
-	 foreach/2, foldl/3, dropwhile/2, type/1, format_error/1]).
+	 foreach/2, foldl/3, dropwhile/2, type/1, format_error/1,
+	 ram_to_file/1, file_to_ram/1]).
 -export([start/1, stop/0]).
 
 -type rqueue() :: {queue:queue(), non_neg_integer()}.
@@ -163,6 +164,18 @@ clear({_, _}) ->
     {queue:new(), 0};
 clear(Q) ->
     p1_file_queue:clear(Q).
+
+-spec ram_to_file(queue()) -> fqueue().
+ram_to_file({_, _} = Q) ->
+    foldl(fun p1_file_queue:in/2, new(file), Q);
+ram_to_file(Q) ->
+    Q.
+
+-spec file_to_ram(queue()) -> rqueue().
+file_to_ram({_, _} = Q) ->
+    Q;
+file_to_ram(Q) ->
+    p1_file_queue:foldl(fun in/2, new(ram), Q).
 
 format_error(Reason) ->
     p1_file_queue:format_error(Reason).

@@ -245,6 +245,20 @@ drop_until_empty_file_test() ->
     ?assertEqual(true, p1_queue:is_empty(Q1)),
     ?assertEqual(ok, p1_file_queue:close(Q)).
 
+ram_to_file_test() ->
+    L = mk_list(),
+    RQ = p1_queue:from_list(L, ram),
+    FQ = p1_queue:ram_to_file(RQ),
+    ?assertEqual(L, p1_file_queue:to_list(FQ)),
+    ?assertEqual(ok, p1_file_queue:close(FQ)).
+
+file_to_ram_test() ->
+    L = mk_list(),
+    FQ = p1_queue:from_list(L, file),
+    RQ = p1_queue:file_to_ram(FQ),
+    ?assertEqual(L, p1_queue:to_list(RQ)),
+    ?assertEqual(ok, p1_file_queue:close(FQ)).
+
 format_error_test() ->
     Unknown = "unknown POSIX error",
     ?assertEqual(Unknown, p1_queue:format_error(foo1234)),
