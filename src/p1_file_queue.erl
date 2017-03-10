@@ -26,7 +26,7 @@
 		counter :: pos_integer(),
 		files :: map()}).
 
--type error_reason() :: {corrupted | file:posix(), binary()}.
+-type error_reason() :: {corrupted | not_owner | file:posix(), binary()}.
 -type queue() :: #file_q{}.
 -export_type([queue/0, error_reason/0]).
 
@@ -73,6 +73,8 @@ limit(#file_q{limit = Limit}) ->
 %%    p1_queue:out(Q1)
 %%    ... likely an exception occurs here ...
 %%
+in(_, #file_q{owner = Owner, path = Path}) when Owner /= self() ->
+    erlang:error({bad_queue, {not_owner, Path}});
 in(Item, #file_q{start = Pos, stop = Pos} = Q) when Pos /= 0 ->
     in(Item, clear(Q));
 in(Item, #file_q{fd = Fd, tail = Tail, stop = Pos, limit = Limit} = Q)
@@ -90,6 +92,8 @@ in(_, _) ->
 
 out(#file_q{tail = 0} = Q) ->
     {empty, Q};
+out(#file_q{owner = Owner, path = Path}) when Owner /= self() ->
+    erlang:error({bad_queue, {not_owner, Path}});
 out(#file_q{fd = Fd, tail = Tail, head = Head, start = Pos} = Q) ->
     case read_item(Fd, Pos) of
 	{ok, Item, Next} ->
@@ -101,6 +105,8 @@ out(#file_q{fd = Fd, tail = Tail, head = Head, start = Pos} = Q) ->
 
 peek(#file_q{tail = 0}) ->
     empty;
+peek(#file_q{owner = Owner, path = Path}) when Owner /= self() ->
+    erlang:error({bad_queue, {not_owner, Path}});
 peek(#file_q{fd = Fd, start = Pos} = Q) ->
     case read_item(Fd, Pos) of
 	{ok, Item, _} ->
@@ -111,6 +117,8 @@ peek(#file_q{fd = Fd, start = Pos} = Q) ->
 
 drop(#file_q{tail = 0}) ->
     erlang:error(empty);
+drop(#file_q{owner = Owner, path = Path}) when Owner /= self() ->
+    erlang:error({bad_queue, {not_owner, Path}});
 drop(#file_q{fd = Fd, start = Pos, tail = Tail, head = Head} = Q) ->
     case read_item_size(Fd, Pos) of
 	{ok, Size} ->
@@ -124,6 +132,8 @@ from_list(Items, Limit) when length(Items) =< Limit ->
 from_list(_, _) ->
     erlang:error(full).
 
+to_list(#file_q{owner = Owner, path = Path}) when Owner /= self() ->
+    erlang:error({bad_queue, {not_owner, Path}});
 to_list(#file_q{fd = Fd, tail = Tail, start = Pos} = Q) ->
     case to_list(Fd, Pos, Tail, []) of
 	{ok, L} -> L;
@@ -161,6 +171,8 @@ foreach(F, Q) ->
 	    ok
     end.
 
+clear(#file_q{owner = Owner, path = Path}) when Owner /= self() ->
+    erlang:error({bad_queue, {not_owner, Path}});
 clear(#file_q{fd = Fd, path = Path, limit = Limit}) ->
     case file:position(Fd, 0) of
 	{ok, 0} ->
@@ -181,6 +193,8 @@ close(#file_q{fd = Fd, path = Path}) ->
 -spec format_error(error_reason()) -> string().
 format_error({corrupted, Path}) ->
     "file queue is corrupted (" ++ binary_to_list(Path) ++ ")";
+format_error({not_owner, Path}) ->
+    "not a file queue owner (" ++ binary_to_list(Path) ++ ")";
 format_error({Posix, Path}) ->
     case file:format_error(Posix) of
 	"unknown POSIX error" ->

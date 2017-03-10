@@ -3,6 +3,7 @@
 		 limit    :: non_neg_integer() | unlimited,
 		 fd       :: file:fd(),
 		 path     :: binary(),
+		 owner = self() :: pid(),
 		 start = 0 :: non_neg_integer(),
 		 stop = 0 :: non_neg_integer()}).
 

@@ -283,12 +283,39 @@ file_to_ram_test() ->
     ?assertEqual(RQ, p1_queue:file_to_ram(RQ)),
     ?assertEqual(ok, p1_file_queue:close(FQ)).
 
+not_owner_test() ->
+    Pid = self(),
+    Owner = spawn_link(
+	      fun() ->
+		      Q = p1_queue:from_list(mk_list(), file),
+		      Pid ! {Q, p1_file_queue:path(Q)},
+		      receive stop -> Pid ! stopped end
+	      end),
+    {Q, Path} = receive M -> M end,
+    ?assertError({bad_queue, {not_owner, Path}}, p1_queue:in(11, Q)),
+    ?assertError({bad_queue, {not_owner, Path}}, p1_queue:out(Q)),
+    ?assertError({bad_queue, {not_owner, Path}}, p1_queue:peek(Q)),
+    ?assertError({bad_queue, {not_owner, Path}}, p1_queue:drop(Q)),
+    ?assertError({bad_queue, {not_owner, Path}}, p1_queue:to_list(Q)),
+    ?assertError({bad_queue, {not_owner, Path}}, p1_queue:clear(Q)),
+    ?assertError({bad_queue, {not_owner, Path}},
+		 p1_queue:foreach(fun(_) -> ok end, Q)),
+    ?assertError({bad_queue, {not_owner, Path}},
+		 p1_queue:dropwhile(fun(_) -> true end, Q)),
+    ?assertError({bad_queue, {not_owner, Path}},
+		 p1_queue:foldl(fun(_, X) -> X end, ok, Q)),
+    Owner ! stop,
+    receive stopped -> ok end.
+
 format_error_test() ->
     Path = "/path/to/queue",
+    PathBin = list_to_binary(Path),
     ?assertEqual("foo1234 (" ++ Path ++ ")",
-		 p1_queue:format_error({foo1234, list_to_binary(Path)})),
+		 p1_queue:format_error({foo1234, PathBin})),
+    ?assertNotEqual("not_owner (" ++ Path ++ ")",
+		    p1_queue:format_error({not_owner, PathBin})),
     ?assertNotEqual("corrupted (" ++ Path ++ ")",
-		    p1_queue:format_error({corrupted, list_to_binary(Path)})).
+		    p1_queue:format_error({corrupted, PathBin})).
 
 bad_size_test() ->
     #file_q{fd = Fd, path = Path} = Q = p1_queue:from_list([1], file),
@@ -353,10 +380,6 @@ write_fail_test() ->
     ?assertError({bad_queue, {ebadf, Path}}, p1_queue:in(1, Q1)),
     ?assertError({bad_queue, {einval, Path}}, p1_file_queue:clear(Q1)),
     ?assertEqual(ok, p1_file_queue:close(Q1)).
-
-monitor_test() ->
-    %% Check if 'DOWN' messages is correctly processed
-    spawn(fun() -> p1_queue:new(file) end).
 
 gc_test() ->
     Q = p1_queue:from_list(lists:seq(1, 1001), file),
