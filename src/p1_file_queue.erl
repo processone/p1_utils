@@ -22,7 +22,7 @@
 
 -include("p1_queue.hrl").
 
--record(state, {dir :: filename:filename(),
+-record(state, {dir :: file:filename(),
 		counter :: pos_integer(),
 		files :: map()}).
 

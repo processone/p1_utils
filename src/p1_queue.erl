@@ -27,7 +27,7 @@
 %%%===================================================================
 %%% API
 %%%===================================================================
--spec start(filename:filename()) -> ok | {error, any()}.
+-spec start(file:filename()) -> ok | {error, any()}.
 start(Dir) ->
     application:ensure_all_started(p1_utils),
     case p1_file_queue:start(Dir) of
@@ -56,7 +56,7 @@ new(ram, Limit) ->
 new(file, Limit) ->
     p1_file_queue:new(Limit).
 
--spec type(queue()) -> ram | {file, filename:filename()}.
+-spec type(queue()) -> ram | {file, file:filename()}.
 type({_, _, _}) ->
     ram;
 type(Q) ->
