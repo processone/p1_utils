@@ -1,6 +1,5 @@
 # Version 1.0.7
 
-
 * Fix coverall invocation (Paweł Chmielowski)
 * Fix p1_server timeout handling, R18 compatibility (Alexey Shchepin)
 
