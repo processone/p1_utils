@@ -1,3 +1,14 @@
+# Version 1.0.8
+
+* Add p1_queue
+* Only perform destructive operations in p1_file_queue:in/2
+* Add garbage collector for file queues
+* Add ram_to_file/1 and file_to_ram/1
+* Improve exception names
+* Implement limited queues
+* Add ownership protection
+* Add get_limit/1 and set_limit/2
+
 # Version 1.0.7
 
 * Fix coverall invocation (Paweł Chmielowski)
