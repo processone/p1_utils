@@ -173,9 +173,15 @@ get_exprs(Mod) ->
 		      io_lib:format(
 			"is_known(~p) -> true;~n", [Opt]) ++ Acc
 	      end, "", OptMap) ++ "is_known(_) -> false.",
+    Scopes = maps:fold(
+	       fun(Opt, Vals, Acc) ->
+		       io_lib:format(
+			 "get_scope(~p) -> ~p;~n",
+			 [Opt, [Scope || {Scope, _} <- Vals]]) ++ Acc
+	       end, "", OptMap) ++ "get_scope(_) -> [].",
     [io_lib:format("-module(~p).", [Mod]),
      "-compile(export_all).",
-     Known | Opts].
+     Known, Scopes | Opts].
 
 -spec compile_exprs(module(), [string()]) -> ok | {error, any()}.
 compile_exprs(Mod, Exprs) ->
