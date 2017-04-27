@@ -23,7 +23,8 @@
 -behaviour(gen_server).
 
 %% API
--export([start/1, start_link/1, insert/4, delete/3, lookup/3, compile/1]).
+-export([start/1, start_link/1, insert/4, delete/3, lookup/3, clear/1,
+	 compile/1]).
 %% For debug only
 -export([dump/1]).
 
@@ -73,6 +74,11 @@ lookup(Tab, Opt, Scope) ->
 	[] -> undefined;
 	[{_, Val}] -> {ok, Val}
     end.
+
+-spec clear(atom()) -> ok.
+clear(Tab) ->
+    ets:delete_all_objects(Tab),
+    ok.
 
 -spec compile(atom()) -> ok.
 compile(Tab) ->
