@@ -1,3 +1,7 @@
+# Version 1.0.9
+
+* Add p1_options module
+
 # Version 1.0.8
 
 * Add p1_queue
