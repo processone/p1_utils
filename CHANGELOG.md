@@ -1,3 +1,7 @@
+# Version 1.0.11
+
+* Fix compilation with rebar3
+
 # Version 1.0.10
 
 * Fix problem with edoc
