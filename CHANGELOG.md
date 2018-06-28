@@ -1,3 +1,7 @@
+# Version 1.0.12
+
+* Don't fetch generic\_debug option from init
+
 # Version 1.0.11
 
 * Fix compilation with rebar3
