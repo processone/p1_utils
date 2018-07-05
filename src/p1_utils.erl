@@ -32,7 +32,10 @@ stop(_State) ->
 %%% API
 %%%===================================================================
 start() ->
-    application:start(p1_utils).
+    case application:ensure_all_started(p1_utils) of
+	{ok, _} -> ok;
+	Err -> Err
+    end.
 
 stop() ->
     application:stop(p1_utils).
