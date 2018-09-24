@@ -1,3 +1,7 @@
+# Version 1.0.13
+
+* Add p1\_rand and shaper module
+
 # Version 1.0.12
 
 * Don't fetch generic\_debug option from init
