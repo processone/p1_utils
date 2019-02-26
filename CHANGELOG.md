@@ -1,3 +1,8 @@
+# Version 1.0.14
+
+* Add contribution guide
+* Remove exec bit from doc/style.css
+
 # Version 1.0.13
 
 * Add p1\_rand and shaper module
