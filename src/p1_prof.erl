@@ -27,7 +27,7 @@
 
 %% API
 -export([eprof_start/0, eprof_stop/0,
-	 eprof_start/1,
+	 eprof_start/1, fprof_apply/3,
 	 fprof_start/0, fprof_start/1,
 	 fprof_stop/0, fprof_analyze/0,
 	 queue/0, queue/1, memory/0, memory/1,
@@ -53,6 +53,10 @@ eprof_start([]) ->
 eprof_start(Procs) ->
     eprof:start(),
     eprof:start_profiling(Procs).
+
+fprof_apply(M, F, A) ->
+    fprof:apply(M, F, A, [{file, ?TRACE_FILE}]),
+    fprof_analyze().
 
 fprof_start() ->
     fprof_start(0).
