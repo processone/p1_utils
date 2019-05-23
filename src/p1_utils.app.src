@@ -1,7 +1,7 @@
 {application, p1_utils,
  [
   {description, "Erlang utility modules from ProcessOne"},
-  {vsn, "1.0.14"},
+  {vsn, "1.0.15"},
   {modules, []},
   {registered, []},
   {applications, [
