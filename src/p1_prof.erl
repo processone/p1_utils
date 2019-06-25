@@ -168,10 +168,10 @@ queue(N) ->
     dump(N, lists:reverse(lists:ukeysort(1, all_pids(queue)))).
 
 memory(N) ->
-    dump(N, lists:reverse(lists:ukeysort(3, all_pids(memory)))).
+    dump(N, lists:reverse(lists:ukeysort(2, all_pids(memory)))).
 
 reds(N) ->
-    dump(N, lists:reverse(lists:ukeysort(4, all_pids(reductions)))).
+    dump(N, lists:reverse(lists:ukeysort(3, all_pids(reductions)))).
 
 trace(Pid) ->
     erlang:trace(Pid, true, [send, 'receive']),
@@ -280,24 +280,33 @@ all_pids(Type) ->
 	      case catch process_info(
 			   P,
 			   [message_queue_len,
+			    status,
 			    memory,
 			    reductions,
 			    dictionary,
 			    current_function,
 			    registered_name]) of
-		  [{_, Len}, {_, Memory}, {_, Reds},
+		  [{_, QLen}, {_, Status}, {_, Memory}, {_, Reds},
 		   {_, Dict}, {_, CurFun}, {_, RegName}] ->
-                      IntQLen = case lists:keysearch('$internal_queue_len', 1, Dict) of
-                                    {value, {_, N}} ->
-                                        N;
-                                    _ ->
-                                        0
-                                end,
-		      if Type == queue andalso Len == 0 andalso IntQLen == 0 ->
+		      Dict1 = filter_dict(Dict, RegName),
+                      {IntQLen, Dict2} =
+			  case lists:keytake('$internal_queue_len', 1, Dict1) of
+			      {value, {_, N}, D} ->
+				  {N, D};
+			      false ->
+				  {0, Dict1}
+			  end,
+		      Len = QLen + IntQLen,
+		      if Type == queue andalso Len == 0 ->
 			      Acc;
 			 true ->
-                              MaxLen = lists:max([Len, IntQLen]),
-			      [{MaxLen, Len, Memory, Reds, Dict, CurFun, P, RegName}|Acc]
+                              Dict3 = [{message_queue_len, Len},
+				       {status, Status},
+				       {memory, Memory},
+				       {reductions, Reds},
+				       {current_function, CurFun},
+				       {registered_name, RegName}|Dict2],
+			      [{Len, Memory, Reds, P, Dict3}|Acc]
 		      end;
 		  _ ->
 		      Acc
@@ -306,19 +315,15 @@ all_pids(Type) ->
 
 dump(N, Rs) ->
     lists:foreach(
-      fun({_, MsgQLen, Memory, Reds, Dict, CurFun, Pid, RegName}) ->
+      fun({_, _, _, Pid, Properties}) ->
 	      PidStr = pid_to_list(Pid),
 	      [_, Maj, Min] = string:tokens(
 				string:substr(
 				  PidStr, 2, length(PidStr) - 2), "."),
-              io:format("** pid(0,~s,~s)~n"
-			"** registered name: ~p~n"
-			"** memory: ~p~n"
-			"** reductions: ~p~n"
-                        "** message queue len: ~p~n"
-			"** current_function: ~p~n"
-                        "** dictionary: ~p~n~n",
-                        [Maj, Min, RegName, Memory, Reds, MsgQLen, CurFun, Dict])
+	      io:put_chars(
+		[io_lib:format("** pid: pid(0,~s,~s)~n", [Maj, Min]),
+		 [io_lib:format("** ~s: ~p~n", [Key, Val])
+		  || {Key, Val} <- Properties], io_lib:nl()])
       end, nthhead(N, Rs)).
 
 nthhead(N, L) ->
@@ -331,6 +336,13 @@ nthhead(N, [H|T], Acc) ->
 nthhead(_N, [], Acc) ->
     Acc.
 
+filter_dict(Dict, RegName) ->
+    lists:filter(
+      fun({'$internal_queue_len', _}) -> true;
+	 ({'$initial_call', _}) -> RegName == [];
+	 ({'$ancestors', _}) -> RegName == [];
+	 (_) -> false
+      end, Dict).
 
 % output in the console counts of locks, optionally waiting for few seconds before collect
 locks() ->
