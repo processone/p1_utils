@@ -38,13 +38,13 @@
 %%%
 %%% The idea behind THIS server is that the user module
 %%% provides (different) functions to handle different
-%%% kind of inputs. 
+%%% kind of inputs.
 %%% If the Parent process terminates the Module:terminate/2
 %%% function is called.
 %%%
 %%% The user module should export:
 %%%
-%%%   init(Args)  
+%%%   init(Args)
 %%%     ==> {ok, State}
 %%%         {ok, State, Timeout}
 %%%         ignore
@@ -56,21 +56,21 @@
 %%%        {reply, Reply, State, Timeout}
 %%%        {noreply, State}
 %%%        {noreply, State, Timeout}
-%%%        {stop, Reason, Reply, State}  
+%%%        {stop, Reason, Reply, State}
 %%%              Reason = normal | shutdown | Term terminate(State) is called
 %%%
 %%%   handle_cast(Msg, State)
 %%%
 %%%    ==> {noreply, State}
 %%%        {noreply, State, Timeout}
-%%%        {stop, Reason, State} 
+%%%        {stop, Reason, State}
 %%%              Reason = normal | shutdown | Term terminate(State) is called
 %%%
 %%%   handle_info(Info, State) Info is e.g. {'EXIT', P, R}, {nodedown, N}, ...
 %%%
 %%%    ==> {noreply, State}
 %%%        {noreply, State, Timeout}
-%%%        {stop, Reason, State} 
+%%%        {stop, Reason, State}
 %%%              Reason = normal | shutdown | Term, terminate(State) is called
 %%%
 %%%   terminate(Reason, State) Let the user module clean up
@@ -125,7 +125,7 @@
 
 %%% Internal gen_fsm state
 %%% This state is used to defined resource control values:
--record(limits, {max_queue :: non_neg_integer()}).
+-record(limits, {max_queue :: non_neg_integer() | undefined}).
 
 %%%=========================================================================
 %%%  API
@@ -193,7 +193,7 @@ start_link(Name, Mod, Args, Options) ->
 %% be monitored.
 %% If the client is trapping exits and is linked server termination
 %% is handled here (? Shall we do that here (or rely on timeouts) ?).
-%% ----------------------------------------------------------------- 
+%% -----------------------------------------------------------------
 call(Name, Request) ->
     case catch gen:call(Name, '$gen_call', Request) of
 	{ok,Res} ->
@@ -219,17 +219,17 @@ cast({global,Name}, Request) ->
 cast({via, Mod, Name}, Request) ->
     catch Mod:send(Name, cast_msg(Request)),
     ok;
-cast({Name,Node}=Dest, Request) when is_atom(Name), is_atom(Node) -> 
+cast({Name,Node}=Dest, Request) when is_atom(Name), is_atom(Node) ->
     do_cast(Dest, Request);
 cast(Dest, Request) when is_atom(Dest) ->
     do_cast(Dest, Request);
 cast(Dest, Request) when is_pid(Dest) ->
     do_cast(Dest, Request).
 
-do_cast(Dest, Request) -> 
+do_cast(Dest, Request) ->
     do_send(Dest, cast_msg(Request)),
     ok.
-    
+
 cast_msg(Request) -> {'$gen_cast',Request}.
 
 %% -----------------------------------------------------------------
@@ -238,9 +238,9 @@ cast_msg(Request) -> {'$gen_cast',Request}.
 reply({To, Tag}, Reply) ->
     catch To ! {Tag, Reply}.
 
-%% ----------------------------------------------------------------- 
+%% -----------------------------------------------------------------
 %% Asynchronous broadcast, returns nothing, it's just send 'n' pray
-%%-----------------------------------------------------------------  
+%%-----------------------------------------------------------------
 abcast(Name, Request) when is_atom(Name) ->
     do_abcast([node() | nodes()], Name, cast_msg(Request)).
 
@@ -256,36 +256,36 @@ do_abcast([], _,_) -> abcast.
 %%% Make a call to servers at several nodes.
 %%% Returns: {[Replies],[BadNodes]}
 %%% A Timeout can be given
-%%% 
+%%%
 %%% A middleman process is used in case late answers arrives after
 %%% the timeout. If they would be allowed to glog the callers message
-%%% queue, it would probably become confused. Late answers will 
+%%% queue, it would probably become confused. Late answers will
 %%% now arrive to the terminated middleman and so be discarded.
 %%% -----------------------------------------------------------------
 multi_call(Name, Req)
   when is_atom(Name) ->
     do_multi_call([node() | nodes()], Name, Req, infinity).
 
-multi_call(Nodes, Name, Req) 
+multi_call(Nodes, Name, Req)
   when is_list(Nodes), is_atom(Name) ->
     do_multi_call(Nodes, Name, Req, infinity).
 
 multi_call(Nodes, Name, Req, infinity) ->
     do_multi_call(Nodes, Name, Req, infinity);
-multi_call(Nodes, Name, Req, Timeout) 
+multi_call(Nodes, Name, Req, Timeout)
   when is_list(Nodes), is_atom(Name), is_integer(Timeout), Timeout >= 0 ->
     do_multi_call(Nodes, Name, Req, Timeout).
 
 
 %%-----------------------------------------------------------------
-%% enter_loop(Mod, Options, State, <ServerName>, <TimeOut>) ->_ 
-%%   
-%% Description: Makes an existing process into a gen_server. 
-%%              The calling process will enter the gen_server receive 
+%% enter_loop(Mod, Options, State, <ServerName>, <TimeOut>) ->_
+%%
+%% Description: Makes an existing process into a gen_server.
+%%              The calling process will enter the gen_server receive
 %%              loop and become a gen_server process.
-%%              The process *must* have been started using one of the 
-%%              start functions in proc_lib, see proc_lib(3). 
-%%              The user is responsible for any initialization of the 
+%%              The process *must* have been started using one of the
+%%              start functions in proc_lib, see proc_lib(3).
+%%              The user is responsible for any initialization of the
 %%              process, including registering a name for it.
 %%-----------------------------------------------------------------
 enter_loop(Mod, Options, State) ->
@@ -332,11 +332,11 @@ init_it(Starter, Parent, Name0, Mod, Args, Options) ->
     QueueLen = 0,
     case catch Mod:init(Args) of
 	{ok, State} ->
-	    proc_lib:init_ack(Starter, {ok, self()}), 	    
+	    proc_lib:init_ack(Starter, {ok, self()}),
 	    loop(Parent, Name, State, Mod, infinity, Debug,
                  Limits, Queue, QueueLen);
 	{ok, State, Timeout} ->
-	    proc_lib:init_ack(Starter, {ok, self()}), 	    
+	    proc_lib:init_ack(Starter, {ok, self()}),
 	    loop(Parent, Name, State, Mod, Timeout, Debug,
                  Limits, Queue, QueueLen);
 	{stop, Reason} ->
@@ -376,7 +376,7 @@ unregister_name({via, Mod, Name}) ->
     _ = Mod:unregister_name(Name);
 unregister_name(Pid) when is_pid(Pid) ->
     Pid.
-    
+
 %%%========================================================================
 %%% Internal functions
 %%%========================================================================
@@ -522,7 +522,7 @@ do_multi_call(Nodes, Name, Req, Timeout) ->
 	{'DOWN',Mref,_,_,{Receiver,Tag,Result}} ->
 	    Result;
 	{'DOWN',Mref,_,_,Reason} ->
-	    %% The middleman code failed. Or someone did 
+	    %% The middleman code failed. Or someone did
 	    %% exit(_, kill) on the middleman process => Reason==killed
 	    exit(Reason)
     end.
@@ -539,7 +539,7 @@ send_nodes([Node|Tail], Name, Tag, Req, Monitors)
 send_nodes([_Node|Tail], Name, Tag, Req, Monitors) ->
     %% Skip non-atom Node
     send_nodes(Tail, Name, Tag, Req, Monitors);
-send_nodes([], _Name, _Tag, _Req, Monitors) -> 
+send_nodes([], _Name, _Tag, _Req, Monitors) ->
     Monitors.
 
 %% Against old nodes:
@@ -549,7 +549,7 @@ send_nodes([], _Name, _Tag, _Req, Monitors) ->
 %% Against contemporary nodes:
 %% Wait for reply, server 'DOWN', or timeout from TimerId.
 
-rec_nodes(Tag, Nodes, Name, TimerId) -> 
+rec_nodes(Tag, Nodes, Name, TimerId) ->
     rec_nodes(Tag, Nodes, Name, [], [], 2000, TimerId).
 
 rec_nodes(Tag, [{N,R}|Tail], Name, Badnodes, Replies, Time, TimerId ) ->
@@ -558,9 +558,9 @@ rec_nodes(Tag, [{N,R}|Tail], Name, Badnodes, Replies, Time, TimerId ) ->
 	    rec_nodes(Tag, Tail, Name, [N|Badnodes], Replies, Time, TimerId);
 	{{Tag, N}, Reply} ->  %% Tag is bound !!!
 	    erlang:demonitor(R, [flush]),
-	    rec_nodes(Tag, Tail, Name, Badnodes, 
+	    rec_nodes(Tag, Tail, Name, Badnodes,
 		      [{N,Reply}|Replies], Time, TimerId);
-	{timeout, TimerId, _} ->	
+	{timeout, TimerId, _} ->
 	    erlang:demonitor(R, [flush]),
 	    %% Collect all replies that already have arrived
 	    rec_nodes_rest(Tag, Tail, Name, [N|Badnodes], Replies)
@@ -576,7 +576,7 @@ rec_nodes(Tag, [N|Tail], Name, Badnodes, Replies, Time, TimerId) ->
 	    monitor_node(N, false),
 	    rec_nodes(Tag, Tail, Name, Badnodes,
 		      [{N,Reply}|Replies], 2000, TimerId);
-	{timeout, TimerId, _} ->	
+	{timeout, TimerId, _} ->
 	    receive {nodedown, N} -> ok after 0 -> ok end,
 	    monitor_node(N, false),
 	    %% Collect all replies that already have arrived
@@ -684,7 +684,7 @@ handle_msg({'$gen_call', From, Msg}, Parent, Name, State, Mod,
 	    loop(Parent, Name, NState, Mod, Time1, [],
                  Limits, Queue, QueueLen);
 	{stop, Reason, Reply, NState} ->
-	    {'EXIT', R} = 
+	    {'EXIT', R} =
 		(catch terminate(Reason, Name, Msg, Mod, NState, [], Queue)),
 	    reply(From, Reply),
 	    exit(R);
@@ -719,7 +719,7 @@ handle_msg({'$gen_call', From, Msg}, Parent, Name, State, Mod, Debug,
 	    loop(Parent, Name, NState, Mod, Time1, Debug1,
                  Limits, Queue, QueueLen);
 	{stop, Reason, Reply, NState} ->
-	    {'EXIT', R} = 
+	    {'EXIT', R} =
 		(catch terminate(Reason, Name, Msg, Mod, NState, Debug, Queue)),
 	    reply(Name, From, Reply, NState, Debug),
 	    exit(R);
@@ -828,7 +828,7 @@ print_event(Dev, {in, Msg}, Name) ->
 	    io:format(Dev, "*DBG* ~p got ~p~n", [Name, Msg])
     end;
 print_event(Dev, {out, Msg, To, State}, Name) ->
-    io:format(Dev, "*DBG* ~p sent ~p to ~w, new state ~w~n", 
+    io:format(Dev, "*DBG* ~p sent ~p to ~w, new state ~w~n",
 	      [Name, Msg, To, State]);
 print_event(Dev, {noreply, State}, Name) ->
     io:format(Dev, "*DBG* ~p new state ~w~n", [Name, State]);
@@ -885,7 +885,7 @@ error_info(_Mod, _Reason, application_controller, _Msg, _State, _Debug) ->
     %% of it instead
     ok;
 error_info(Mod, Reason, Name, Msg, State, Debug) ->
-    Reason1 = 
+    Reason1 =
 	case Reason of
 	    {undef,[{M,F,A,L}|MFAs]} ->
 		case code:is_loaded(M) of
@@ -901,7 +901,7 @@ error_info(Mod, Reason, Name, Msg, State, Debug) ->
 		end;
 	    _ ->
 		Reason
-	end,    
+	end,
     StateToPrint = case erlang:function_exported(Mod, print_state, 1) of
       true -> (catch Mod:print_state(State));
       false -> State
@@ -951,7 +951,7 @@ get_proc_name({local, Name}) ->
 	    exit(process_not_registered);
 	[] ->
 	    exit(process_not_registered)
-    end;    
+    end;
 get_proc_name({global, Name}) ->
     case global:whereis_name(Name) of
 	undefined ->

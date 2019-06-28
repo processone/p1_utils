@@ -23,7 +23,7 @@
 -include("p1_queue.hrl").
 
 -record(state, {dir :: file:filename(),
-		counter :: pos_integer(),
+		counter :: non_neg_integer(),
 		files :: map()}).
 
 -type error_reason() :: {corrupted | not_owner | file:posix(), binary()}.

@@ -17,12 +17,14 @@
 -export([start/1, stop/0]).
 
 -type limit() :: non_neg_integer() | unlimited.
--type rqueue() :: {queue:queue(), non_neg_integer(), limit()}.
+-type rqueue() :: rqueue(any()).
+-type rqueue(T) :: {queue:queue(T), non_neg_integer(), limit()}.
 -type fqueue() :: p1_file_queue:queue().
--type queue() :: rqueue() | fqueue().
+-type queue() :: rqueue(any()) | fqueue().
+-type queue(T) :: rqueue(T) | fqueue().
 -type queue_type() :: ram | file.
 -type error_reason() :: p1_file_queue:error_reason().
--export_type([queue/0, queue_type/0, error_reason/0]).
+-export_type([queue/0, queue/1, queue_type/0, error_reason/0]).
 
 %%%===================================================================
 %%% API
@@ -86,14 +88,14 @@ get_limit({_, _, Limit}) ->
 get_limit(Q) ->
     p1_file_queue:get_limit(Q).
 
--spec set_limit(rqueue(), limit()) -> rqueue();
+-spec set_limit(rqueue(T), limit()) -> rqueue(T);
 	       (fqueue(), limit()) -> fqueue().
 set_limit({Q, Len, _}, Limit) ->
     {Q, Len, Limit};
 set_limit(Q, Limit) ->
     p1_file_queue:set_limit(Q, Limit).
 
--spec in(term(), rqueue()) -> rqueue();
+-spec in(term(), rqueue(T)) -> rqueue(T);
 	(term(), fqueue()) -> fqueue().
 in(Item, {Q, Len, Limit}) ->
     if Len < Limit ->
@@ -104,7 +106,7 @@ in(Item, {Q, Len, Limit}) ->
 in(Item, Q) ->
     p1_file_queue:in(Item, Q).
 
--spec out(rqueue()) -> {{value, term()}, rqueue()} | {empty, rqueue()};
+-spec out(rqueue(T)) -> {{value, term()}, rqueue(T)} | {empty, rqueue(T)};
 	 (fqueue()) -> {{value, term()}, fqueue()} | {empty, fqueue()}.
 out({Q, 0, Limit}) ->
     {empty, {Q, 0, Limit}};
@@ -114,29 +116,29 @@ out({Q, Len, Limit}) ->
 out(Q) ->
     p1_file_queue:out(Q).
 
--spec peek(queue()) -> empty | {value, term()}.
+-spec peek(queue(T)) -> empty | {value, T}.
 peek({Q, _, _}) ->
     queue:peek(Q);
 peek(Q) ->
     p1_file_queue:peek(Q).
 
--spec drop(rqueue()) -> rqueue();
+-spec drop(rqueue(T)) -> rqueue(T);
 	  (fqueue()) -> fqueue().
 drop({Q, Len, Limit}) ->
     {queue:drop(Q), Len-1, Limit};
 drop(Q) ->
     p1_file_queue:drop(Q).
 
--spec from_list(list()) -> rqueue().
+-spec from_list([T]) -> rqueue(T).
 from_list(L) ->
     from_list(L, ram, unlimited).
 
--spec from_list(list(), ram) -> rqueue();
+-spec from_list([T], ram) -> rqueue(T);
 	       (list(), file) -> fqueue().
 from_list(L, Type) ->
     from_list(L, Type, unlimited).
 
--spec from_list(list(), ram, limit()) -> rqueue();
+-spec from_list([T], ram, limit()) -> rqueue(T);
 	       (list(), file, limit()) -> fqueue().
 from_list(L, ram, Limit) ->
     Len = length(L),
@@ -148,13 +150,13 @@ from_list(L, ram, Limit) ->
 from_list(L, file, Limit) ->
     p1_file_queue:from_list(L, Limit).
 
--spec to_list(queue()) -> list().
+-spec to_list(queue(T)) -> [T].
 to_list({Q, _, _}) ->
     queue:to_list(Q);
 to_list(Q) ->
     p1_file_queue:to_list(Q).
 
--spec foreach(fun((term()) -> term()), fqueue()) -> ok.
+-spec foreach(fun((T) -> term()), queue(T)) -> ok.
 foreach(F, {Q, Len, Limit}) ->
     case queue:out(Q) of
 	{{value, Item}, Q1} ->
@@ -166,7 +168,7 @@ foreach(F, {Q, Len, Limit}) ->
 foreach(F, Q) ->
     p1_file_queue:foreach(F, Q).
 
--spec foldl(fun((term(), T) -> T), T, queue()) -> T.
+-spec foldl(fun((T1, T2) -> T2), T2, queue(T1)) -> T2.
 foldl(F, Acc, {Q, Len, Limit}) ->
     case queue:out(Q) of
 	{{value, Item}, Q1} ->
@@ -178,7 +180,7 @@ foldl(F, Acc, {Q, Len, Limit}) ->
 foldl(F, Acc, Q) ->
     p1_file_queue:foldl(F, Acc, Q).
 
--spec dropwhile(fun((term()) -> boolean()), rqueue()) -> rqueue();
+-spec dropwhile(fun((T) -> boolean()), rqueue(T)) -> rqueue(T);
 		(fun((term()) -> boolean()), fqueue()) -> fqueue().
 dropwhile(_, {_, 0, _} = Q) ->
     Q;
@@ -193,7 +195,7 @@ dropwhile(F, {Q, Len, Limit}) ->
 dropwhile(F, Q) ->
     p1_file_queue:dropwhile(F, Q).
 
--spec clear(rqueue()) -> rqueue();
+-spec clear(rqueue(T)) -> rqueue(T);
 	   (fqueue()) -> fqueue().
 clear({_, _, Limit}) ->
     {queue:new(), 0, Limit};
