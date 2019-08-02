@@ -1,3 +1,8 @@
+# Version 1.0.16
+
+* Update type specs
+* Avoid lengthy output of p1\_prof:m/r/q commands
+
 # Version 1.0.15
 
 * Add p1\_prof module
