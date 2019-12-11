@@ -86,7 +86,7 @@ compile(Tab) ->
 	{error, Reason} ->
 	    error_logger:error_msg(
 	      "Failed to compile configuration for ~p: ~s",
-	      [format_error(Reason)]),
+	      [Tab, format_error(Reason)]),
 	    erlang:error({compile_failed, Tab})
     end.
 
@@ -97,9 +97,9 @@ dump(Mod) ->
     case file:write_file(File, string:join(Exprs, io_lib:nl())) of
 	ok ->
 	    erl_tidy:file(File, [{backups, false}]),
-	    io:format("Dynamic module '~s' is written to ~s~n", [Mod, File]);
+	    io:format("Dynamic module '~s' is written to ~ts~n", [Mod, File]);
 	{error, Reason} ->
-	    io:format("Failed to dump dynamic module '~s' to ~s: ~s~n",
+	    io:format("Failed to dump dynamic module '~s' to ~ts: ~s~n",
 		      [Mod, File, file:format_error(Reason)])
     end.
 
