@@ -828,7 +828,7 @@ format_status(Opt, StatusData) ->
 		      Name
 	      end,
     Header = lists:concat(["Status for state machine ", NameTag]),
-    Log = sys:get_debug(log, Debug, []),
+    Log = sys_get_debug(log, Debug, []),
     Specfic =
 	case erlang:function_exported(Mod, format_status, 2) of
 	    true ->
@@ -845,6 +845,12 @@ format_status(Opt, StatusData) ->
 	     {"Logged events", Log},
 	     {"StateName", StateName}]} |
      Specfic].
+
+-ifdef(USE_OLD_SYS_GET_DEBUG).
+sys_get_debug(Item, Debug, Default) -> sys:get_debug(Item, Debug, Default).
+-else.
+sys_get_debug(log, Debug, _Default) -> sys:get_log(Debug).
+-endif.
 
 %%-----------------------------------------------------------------
 %% Resources limit management

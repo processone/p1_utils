@@ -1002,7 +1002,7 @@ format_status(Opt, StatusData) ->
                                       _Limits, _Queue, _QueueLen]] = StatusData,
     Header = gen:format_status_header("Status for generic server",
                                       Name),
-    Log = sys:get_debug(log, Debug, []),
+    Log = sys_get_debug(log, Debug, []),
     DefaultStatus = [{data, [{"State", State}]}],
     Specfic =
 	case erlang:function_exported(Mod, format_status, 2) of
@@ -1020,6 +1020,12 @@ format_status(Opt, StatusData) ->
 	     {"Parent", Parent},
 	     {"Logged events", Log}]} |
      Specfic].
+
+-ifdef(USE_OLD_SYS_GET_DEBUG).
+sys_get_debug(Item, Debug, Default) -> sys:get_debug(Item, Debug, Default).
+-else.
+sys_get_debug(log, Debug, _Default) -> sys:get_log(Debug).
+-endif.
 
 %%-----------------------------------------------------------------
 %% Resources limit management
