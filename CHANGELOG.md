@@ -1,3 +1,7 @@
+# Version 1.0.19
+
+* Fix compatibility issues with Erlang 23
+
 # Version 1.0.18
 
 * Update copyright year
