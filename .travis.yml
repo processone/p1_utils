@@ -1,13 +1,16 @@
-sudo: false
-
 language: erlang
+
+os: linux
+
+dist: xenial
 
 install:
   - rebar get-deps
 
-script: rebar compile && rebar skip_deps=true eunit
+script: rebar3 compile && rebar3 eunit
 
 otp_release:
-  - 17.1
   - 17.5
   - 18.1
+  - 22.3
+  - 23.0
