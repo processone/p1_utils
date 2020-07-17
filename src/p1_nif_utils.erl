@@ -41,7 +41,7 @@ get_so_path(ModuleName, AppNames, SoName) ->
             SoFName = filename:join(["priv", "lib", SoName ++ Ext]),
             LPath = first_match(fun(Path) ->
                                         P = case filename:basename(Path) of
-                                                ebin -> filename:dirname(Path);
+                                                "ebin" -> filename:dirname(Path);
                                                 _ -> Path
                                             end,
                                         case filelib:is_file(filename:join([P, SoFName])) of

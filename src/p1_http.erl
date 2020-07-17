@@ -273,7 +273,7 @@ get(URL, Hdrs) -> request(get, URL, Hdrs).
 -spec post(string(), string()) -> result().
 post(URL, Body) ->
     request(post, URL,
-	    [{<<"content-type">>, <<"x-www-form-urlencoded">>}],
+	    [{"content-type", "x-www-form-urlencoded"}],
 	    Body).
 
 %% @spec (URL, Hdrs, RequestBody) -> Result
