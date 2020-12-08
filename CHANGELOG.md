@@ -1,3 +1,7 @@
+# Version 1.0.21
+
+* Update travis config
+
 # Version 1.0.19
 
 * Fix compatibility issues with Erlang 23
