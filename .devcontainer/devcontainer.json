@@ -1,0 +1,25 @@
+{
+	"name": "Erlang",
+	"build": {
+		"dockerfile": "Dockerfile",
+		"args": {
+			"TAG": "23",
+		}
+    },
+    
+	// Set *default* container specific settings.json values on container create.
+	"settings": {
+		"terminal.integrated.shell.linux": "/bin/bash",
+		"erlang.linting": true,
+		"erlang.codeLensEnabled": true
+	},
+
+	// Add the IDs of extensions you want installed when the container is created.
+	"extensions": [
+		"pgourlain.erlang",
+		"garaemon.vscode-emacs-tab"
+    ],
+    
+	// Comment out connect as root instead. More info: https://aka.ms/vscode-remote/containers/non-root.
+	// "remoteUser": "vscode"
+}
