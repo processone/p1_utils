@@ -1,4 +1,5 @@
 {
     "erlang.codeLensEnabled": true,
-    "erlang.linting": true
+    "erlang.linting": true,
+    "workbench.colorTheme": "Default Dark+"
 }
