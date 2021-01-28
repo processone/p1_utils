@@ -1,0 +1,4 @@
+{
+    "erlang.codeLensEnabled": true,
+    "erlang.linting": true
+}
