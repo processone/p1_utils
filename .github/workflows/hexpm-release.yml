@@ -15,4 +15,10 @@ jobs:
       - uses: gleam-lang/setup-erlang@v1.1.2
         with:
           otp-version: 23.2
-      - run: rebar3 eunit
+      - run: rebar3 hex username p1bot
+      - run: rebar3 hex key $P1BOT_HEXPM_KEY
+        env:
+          super_secret: ${{ secrets.P1BOT_HEXPM_KEY }}
+      - run: rebar3 update
+      - run: rebar3 compile
+      - run: rebar3 hex publish
