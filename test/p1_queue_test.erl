@@ -1,6 +1,6 @@
 %%%-------------------------------------------------------------------
 %%% @author Evgeny Khramtsov <ekhramtsov@process-one.net>
-%%% @copyright (C) 2017-2020 Evgeny Khramtsov
+%%% @copyright (C) 2017-2021 Evgeny Khramtsov
 %%% @doc
 %%%
 %%% @end
