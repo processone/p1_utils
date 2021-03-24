@@ -1,24 +1,21 @@
-# This is a work-in-progress. For now we do not yet release the
-# code when tagging a new release.
 name: hexpm-release
-on: [push]
-# on:
-#   push:
-#     tags: [1-9]+.[0-9]+.[0-9]+
-#     branches: master
+
+on:
+  push:
+    tags:
+      - '*'
 
 jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2.0.0
-      - uses: gleam-lang/setup-erlang@v1.1.2
-        with:
-          otp-version: 23.2
-      - run: rebar3 hex username p1bot
-      - run: rebar3 hex key $P1BOT_HEXPM_KEY
+      - name: Check out
+        uses: actions/checkout@v2
+
+      - name: Generate documentation
+        run: rebar3 edoc
+
+      - name: Publish to hex.pm
+        run: rebar3 hex publish --repo hexpm --yes
         env:
-          super_secret: ${{ secrets.P1BOT_HEXPM_KEY }}
-      - run: rebar3 update
-      - run: rebar3 compile
-      - run: rebar3 hex publish
+          HEX_API_KEY: ${{ secrets.HEX_API_KEY }}
