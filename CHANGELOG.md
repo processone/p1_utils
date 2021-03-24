@@ -1,3 +1,9 @@
+# Version 1.0.22
+
+* Update copyright year to 2021
+* Unit tests + plugin in release workflow
+* Support Docker + VScode development
+
 # Version 1.0.21
 
 * Update travis config
