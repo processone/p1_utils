@@ -12,9 +12,6 @@ jobs:
       - name: Check out
         uses: actions/checkout@v2
 
-      - name: Generate documentation
-        run: rebar3 edoc
-
       - name: Publish to hex.pm
         run: rebar3 hex publish --repo hexpm --yes
         env:
