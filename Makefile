@@ -1,14 +1,27 @@
+REBAR ?= ./rebar
+
+IS_REBAR3:=$(shell expr `$(REBAR) --version | awk -F '[ .]' '/rebar / {print $$2}'` '>=' 3)
+
 all: src
 
 src:
-	rebar compile
+	$(REBAR) compile
 
 clean:
-	rebar clean
+	$(REBAR) clean
 
+ifeq "$(IS_REBAR3)" "1"
+test:
+	$(REBAR) eunit -v
+else
 test: all
-	rebar -v skip_deps=true eunit
+	$(REBAR) -v skip_deps=true eunit
+endif
 
+ifeq "$(IS_REBAR3)" "1"
+dialyzer:
+	$(REBAR) dialyzer
+else
 dialyzer/erlang.plt:
 	@mkdir -p dialyzer
 	@dialyzer --build_plt --output_plt dialyzer/erlang.plt \
@@ -33,5 +46,6 @@ dialyzer: erlang_plt p1_utils_plt
 	@dialyzer --plts dialyzer/*.plt --no_check_plt \
 	--get_warnings -o dialyzer/error.log ebin; \
 	status=$$? ; if [ $$status -ne 2 ]; then exit $$status; else exit 0; fi
+endif
 
 .PHONY: clean src test dialyzer erlang_plt p1_utils_plt
