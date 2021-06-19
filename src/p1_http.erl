@@ -296,7 +296,7 @@ post(URL, Body) ->
 post(URL, Hdrs, Body) ->
     NewHdrs = case [X
 		    || {X, _} <- Hdrs,
-		       str:to_lower(X) == <<"content-type">>]
+		       to_lower(X) == <<"content-type">>]
 		  of
 		[] ->
 		    [{<<"content-type">>, <<"x-www-form-urlencoded">>}
@@ -304,6 +304,15 @@ post(URL, Hdrs, Body) ->
 		_ -> Hdrs
 	      end,
     request(post, URL, NewHdrs, Body).
+
+%% This function is copied from ejabberd's str.erl:
+-spec to_lower(binary()) -> binary();
+              (char()) -> char().
+
+to_lower(B) when is_binary(B) ->
+    iolist_to_binary(string:to_lower(binary_to_list(B)));
+to_lower(C) ->
+    string:to_lower(C).
 
 %% @spec (Method, URL, Hdrs) -> Result
 %%   Method = atom()
