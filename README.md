@@ -1,6 +1,8 @@
 # p1_utils
 
-[![Build Status](https://travis-ci.org/processone/p1_utils.svg?branch=master)](https://travis-ci.org/processone/p1_utils) [![Coverage Status](https://coveralls.io/repos/processone/p1_utils/badge.svg?branch=master&service=github)](https://coveralls.io/github/processone/p1_utils?branch=master) [![Hex version](https://img.shields.io/hexpm/v/p1_utils.svg "Hex version")](https://hex.pm/packages/p1_utils)
+[![CI](https://github.com/processone/p1_utils/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/processone/p1_utils/actions/workflows/ci.yml)
+[![Coverage Status](https://coveralls.io/repos/processone/p1_utils/badge.svg?branch=master&service=github)](https://coveralls.io/github/processone/p1_utils?branch=master)
+[![Hex version](https://img.shields.io/hexpm/v/p1_utils.svg "Hex version")](https://hex.pm/packages/p1_utils)
 
 p1_utils is an application containing ProcessOne modules and tools that are leveraged in other development projects:
 
