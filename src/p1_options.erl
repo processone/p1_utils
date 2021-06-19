@@ -96,7 +96,7 @@ dump(Mod) ->
     File = filename:join("/tmp", atom_to_list(Mod) ++ ".erl"),
     case file:write_file(File, string:join(Exprs, io_lib:nl())) of
 	ok ->
-	    erl_tidy:file(File, [{backups, false}]),
+	    %% erl_tidy:file(File, [{backups, false}]),
 	    io:format("Dynamic module '~s' is written to ~ts~n", [Mod, File]);
 	{error, Reason} ->
 	    io:format("Failed to dump dynamic module '~s' to ~ts: ~s~n",
