@@ -25,10 +25,12 @@ jobs:
           ~/.cache/rebar3/
         key: ${{matrix.otp}}-${{hashFiles('rebar.config')}}
 
-    - run: rebar3 compile
-    - run: rebar3 xref
-    - run: rebar3 dialyzer
-    - run: rebar3 eunit -v
+    - run: adduser tester && chown -R tester .
+
+    - run: su tester -c "rebar3 compile"
+    - run: su tester -c "rebar3 xref"
+    - run: su tester -c "rebar3 dialyzer"
+    - run: su tester -c "rebar3 eunit -v"
 
     - name: Send to Coveralls
       if: matrix.otp == 24
