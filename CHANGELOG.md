@@ -1,3 +1,9 @@
+# Version 1.0.23
+
+* Switch from using Travis to Github Actions as CI
+* Update .gitignore
+* Fix compatibility problems with OTP24
+
 # Version 1.0.22
 
 * Update copyright year to 2021
