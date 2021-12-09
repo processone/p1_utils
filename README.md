@@ -11,6 +11,6 @@ p1_utils is an application containing ProcessOne modules and tools that are leve
 * `p1_time_compat` is a module to ease support and migration of Erlang
   time management function from Erlang R16/R17 to Erlang R18.
 * `p1_http` is an http client which provides a common API for inets / lhttpc / ibrowse
- 
+* `p1_proxy_protocol` decodes HAproxy protocol (v1 and v2) headers.
 
 If you have `rebar` binary, you can generate `p1_utils` documentation by running `rebar3 edoc`.
