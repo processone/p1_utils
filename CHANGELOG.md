@@ -1,3 +1,7 @@
+# Version 1.0.24
+
+* Add module for decoding HAproxy protocol (v1 and v2) headers
+
 # Version 1.0.23
 
 * Switch from using Travis to Github Actions as CI
