@@ -1,4 +1,4 @@
-REBAR ?= ./rebar
+REBAR ?= rebar
 
 IS_REBAR3:=$(shell expr `$(REBAR) --version | awk -F '[ .]' '/rebar / {print $$2}'` '>=' 3)
 
