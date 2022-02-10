@@ -76,7 +76,6 @@ stop() ->
 %% with no options.
 %% @end
 %% @see request/5
--spec request(atom(), string(), headers(), string(), options()) -> result().
 request(Method, URL, Hdrs, Body, Opts) ->
     TimeOut = proplists:get_value(timeout, Opts, infinity),
     Options = [{inactivity_timeout, TimeOut}
@@ -129,7 +128,6 @@ stop() ->
 %% with no options.
 %% @end
 %% @see request/5
--spec request(atom(), string(), headers(), string(), options()) -> result().
 request(Method, URL, Hdrs, Body, Opts) ->
     {[TO, SO], Rest} = proplists:split(Opts, [timeout, socket_options]),
     TimeOut = proplists:get_value(timeout, TO, infinity),
