@@ -16,6 +16,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - run: adduser tester && chown -R tester .
+    - run: su tester -c "make"
     - run: su tester -c "rebar3 compile"
     - run: su tester -c "rebar3 xref"
     - run: su tester -c "rebar3 dialyzer"
