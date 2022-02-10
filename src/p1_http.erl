@@ -52,24 +52,6 @@ start() ->
 stop() ->
     application:stop(ibrowse).
 
-%% @spec (Method, URL, Hdrs, RequestBody, Options) -> Result
-%%   Method = atom()
-%%   URL = string()
-%%   Hdrs = [{Header, Value}]
-%%   Header = string()
-%%   Value = string()
-%%   RequestBody = string()
-%%   Options = [Option]
-%%   Option = {timeout, Milliseconds | infinity} |
-%%            {connect_timeout, Milliseconds | infinity} |
-%%            {socket_options, [term()]}
-
-%%   Milliseconds = integer()
-%%   Result = {ok, StatusCode, Hdrs, ResponseBody}
-%%            | {error, Reason}
-%%   StatusCode = integer()
-%%   ResponseBody = string()
-%%   Reason = connection_closed | connect_timeout | timeout
 %% @doc Sends a request with a body.
 %% Would be the same as calling
 %% `request(Method, URL, Hdrs, Body, [])', that is {@link request/5}
@@ -104,24 +86,6 @@ start() ->
 stop() ->
     application:stop(lhttpc).
 
-%% @spec (Method, URL, Hdrs, RequestBody, Options) -> Result
-%%   Method = atom()
-%%   URL = string()
-%%   Hdrs = [{Header, Value}]
-%%   Header = string()
-%%   Value = string()
-%%   RequestBody = string()
-%%   Options = [Option]
-%%   Option = {timeout, Milliseconds | infinity} |
-%%            {connect_timeout, Milliseconds | infinity} |
-%%            {socket_options, [term()]}
-
-%%   Milliseconds = integer()
-%%   Result = {ok, StatusCode, Hdrs, ResponseBody}
-%%            | {error, Reason}
-%%   StatusCode = integer()
-%%   ResponseBody = string()
-%%   Reason = connection_closed | connect_timeout | timeout
 %% @doc Sends a request with a body.
 %% Would be the same as calling
 %% `request(Method, URL, Hdrs, Body, [])', that is {@link request/5}
@@ -160,24 +124,6 @@ to_list(Str) when is_binary(Str) ->
 to_list(Str) ->
     Str.
 
-%% @spec (Method, URL, Hdrs, RequestBody, Options) -> Result
-%%   Method = atom()
-%%   URL = string()
-%%   Hdrs = [{Header, Value}]
-%%   Header = string()
-%%   Value = string()
-%%   RequestBody = string()
-%%   Options = [Option]
-%%   Option = {timeout, Milliseconds | infinity} |
-%%            {connect_timeout, Milliseconds | infinity} |
-%%            {socket_options, [term()]}
-
-%%   Milliseconds = integer()
-%%   Result = {ok, StatusCode, Hdrs, ResponseBody}
-%%            | {error, Reason}
-%%   StatusCode = integer()
-%%   ResponseBody = string()
-%%   Reason = connection_closed | connect_timeout | timeout
 %% @doc Sends a request with a body.
 %% Would be the same as calling
 %% `request(Method, URL, Hdrs, Body, [])', that is {@link request/5}
@@ -223,13 +169,6 @@ set_pool_size(Size) ->
 
 -endif.
 
-%% @spec (URL) -> Result
-%%   URL = string()
-%%   Result = {ok, StatusCode, Hdrs, ResponseBody}
-%%            | {error, Reason}
-%%   StatusCode = integer()
-%%   ResponseBody = string()
-%%   Reason = connection_closed | connect_timeout | timeout
 %% @doc Sends a GET request.
 %% Would be the same as calling `request(get, URL, [])',
 %% that is {@link request/3} with an empty header list.
@@ -238,16 +177,6 @@ set_pool_size(Size) ->
 -spec get(string()) -> result().
 get(URL) -> request(get, URL, []).
 
-%% @spec (URL, Hdrs) -> Result
-%%   URL = string()
-%%   Hdrs = [{Header, Value}]
-%%   Header = string()
-%%   Value = string()
-%%   Result = {ok, StatusCode, Hdrs, ResponseBody}
-%%            | {error, Reason}
-%%   StatusCode = integer()
-%%   ResponseBody = string()
-%%   Reason = connection_closed | connect_timeout | timeout
 %% @doc Sends a GET request.
 %% Would be the same as calling `request(get, URL, Hdrs)'.
 %% @end
@@ -255,14 +184,6 @@ get(URL) -> request(get, URL, []).
 -spec get(string(), headers()) -> result().
 get(URL, Hdrs) -> request(get, URL, Hdrs).
 
-%% @spec (URL, RequestBody) -> Result
-%%   URL = string()
-%%   RequestBody = string()
-%%   Result = {ok, StatusCode, Hdrs, ResponseBody}
-%%            | {error, Reason}
-%%   StatusCode = integer()
-%%   ResponseBody = string()
-%%   Reason = connection_closed | connect_timeout | timeout
 %% @doc Sends a POST request with form data.
 %% Would be the same as calling
 %% `request(post, URL, [{"content-type", "x-www-form-urlencoded"}], Body)'.
@@ -274,17 +195,6 @@ post(URL, Body) ->
 	    [{"content-type", "x-www-form-urlencoded"}],
 	    Body).
 
-%% @spec (URL, Hdrs, RequestBody) -> Result
-%%   URL = string()
-%%   Hdrs = [{Header, Value}]
-%%   Header = string()
-%%   Value = string()
-%%   RequestBody = string()
-%%   Result = {ok, StatusCode, Hdrs, ResponseBody}
-%%            | {error, Reason}
-%%   StatusCode = integer()
-%%   ResponseBody = string()
-%%   Reason = connection_closed | connect_timeout | timeout
 %% @doc Sends a POST request.
 %% Would be the same as calling
 %% `request(post, URL, Hdrs, Body)'.
@@ -312,17 +222,6 @@ to_lower(B) when is_binary(B) ->
 to_lower(C) ->
     string:to_lower(C).
 
-%% @spec (Method, URL, Hdrs) -> Result
-%%   Method = atom()
-%%   URL = string()
-%%   Hdrs = [{Header, Value}]
-%%   Header = string()
-%%   Value = string()
-%%   Result = {ok, StatusCode, Hdrs, ResponseBody}
-%%            | {error, Reason}
-%%   StatusCode = integer()
-%%   ResponseBody = string()
-%%   Reason = connection_closed | connect_timeout | timeout
 %% @doc Sends a request without a body.
 %% Would be the same as calling `request(Method, URL, Hdrs, [], [])',
 %% that is {@link request/5} with an empty body.
@@ -332,18 +231,6 @@ to_lower(C) ->
 request(Method, URL, Hdrs) ->
     request(Method, URL, Hdrs, [], []).
 
-%% @spec (Method, URL, Hdrs, RequestBody) -> Result
-%%   Method = atom()
-%%   URL = string()
-%%   Hdrs = [{Header, Value}]
-%%   Header = string()
-%%   Value = string()
-%%   RequestBody = string()
-%%   Result = {ok, StatusCode, Hdrs, ResponseBody}
-%%            | {error, Reason}
-%%   StatusCode = integer()
-%%   ResponseBody = string()
-%%   Reason = connection_closed | connect_timeout | timeout
 %% @doc Sends a request with a body.
 %% Would be the same as calling
 %% `request(Method, URL, Hdrs, Body, [])', that is {@link request/5}
