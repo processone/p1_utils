@@ -28,7 +28,7 @@
 
 # Version 1.0.17
 
-* Fix formating of error messages
+* Fix formatting of error messages
 
 # Version 1.0.16
 

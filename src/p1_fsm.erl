@@ -277,7 +277,7 @@ start_timer(Time, Msg) ->
 send_event_after(Time, Event) ->
     erlang:start_timer(Time, self(), {'$gen_event', Event}).
 
-%% Returns the remaing time for the timer if Ref referred to
+%% Returns the remaining time for the timer if Ref referred to
 %% an active timer/send_event_after, false otherwise.
 cancel_timer(Ref) ->
     case erlang:cancel_timer(Ref) of
@@ -829,7 +829,7 @@ format_status(Opt, StatusData) ->
 	      end,
     Header = lists:concat(["Status for state machine ", NameTag]),
     Log = sys_get_debug(log, Debug, []),
-    Specfic =
+    Specific =
 	case erlang:function_exported(Mod, format_status, 2) of
 	    true ->
 		case catch Mod:format_status(Opt,[PDict,StateData]) of
@@ -844,7 +844,7 @@ format_status(Opt, StatusData) ->
 	     {"Parent", Parent},
 	     {"Logged events", Log},
 	     {"StateName", StateName}]} |
-     Specfic].
+     Specific].
 
 -ifdef(USE_OLD_SYS_GET_DEBUG).
 sys_get_debug(Item, Debug, Default) -> sys:get_debug(Item, Debug, Default).
