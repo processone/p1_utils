@@ -499,7 +499,7 @@ do_multi_call(Nodes, Name, Req, Timeout) ->
 	spawn(
 	  fun() ->
 		  %% Middleman process. Should be unsensitive to regular
-		  %% exit signals. The sychronization is needed in case
+		  %% exit signals. The synchronization is needed in case
 		  %% the receiver would exit before the caller started
 		  %% the monitor.
 		  process_flag(trap_exit, true),
@@ -1004,7 +1004,7 @@ format_status(Opt, StatusData) ->
                                       Name),
     Log = sys_get_debug(log, Debug, []),
     DefaultStatus = [{data, [{"State", State}]}],
-    Specfic =
+    Specific =
 	case erlang:function_exported(Mod, format_status, 2) of
 	    true ->
 		case catch Mod:format_status(Opt, [PDict, State]) of
@@ -1019,7 +1019,7 @@ format_status(Opt, StatusData) ->
      {data, [{"Status", SysState},
 	     {"Parent", Parent},
 	     {"Logged events", Log}]} |
-     Specfic].
+     Specific].
 
 -ifdef(USE_OLD_SYS_GET_DEBUG).
 sys_get_debug(Item, Debug, Default) -> sys:get_debug(Item, Debug, Default).
