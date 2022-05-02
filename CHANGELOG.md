@@ -1,3 +1,9 @@
+# Version 1.0.25
+
+* Generate docs when publishing to hex.pm
+* Add missing `compiler` dependency
+* Improve function specs
+
 # Version 1.0.24
 
 * Add module for decoding HAproxy protocol (v1 and v2) headers
