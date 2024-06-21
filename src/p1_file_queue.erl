@@ -200,7 +200,9 @@ format_error({not_owner, Path}) ->
     "not a file queue owner (" ++ binary_to_list(Path) ++ ")";
 format_error({Posix, Path}) ->
     case file:format_error(Posix) of
-	"unknown POSIX error" ->
+	"unknown POSIX error" ->  % Erlang/OTP 25 and older
+	    atom_to_list(Posix) ++ " (" ++ binary_to_list(Path) ++ ")";
+	[$u, $n, $k, $n, $o, $w, $n | _] -> % Erlang/OTP 26 and newer
 	    atom_to_list(Posix) ++ " (" ++ binary_to_list(Path) ++ ")";
 	Reason ->
 	    Reason ++ " (" ++ binary_to_list(Path) ++ ")"
