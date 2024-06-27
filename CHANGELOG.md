@@ -1,3 +1,7 @@
+# Version 1.0.26
+
+* Fix tests issue on OTP26
+
 # Version 1.0.25
 
 * Generate docs when publishing to hex.pm
