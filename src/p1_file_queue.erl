@@ -226,7 +226,7 @@ start_link(Dir) ->
 init([Dir]) ->
     case filelib:ensure_dir(filename:join(Dir, "foo")) of
 	ok ->
-	    crypto:start(),
+	    application:start(crypto),
 	    process_flag(trap_exit, true),
 	    {ok, #state{dir = Dir, files = #{}, counter = 0}};
 	{error, Reason} ->
