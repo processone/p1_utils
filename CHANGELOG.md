@@ -1,3 +1,7 @@
+# Version 1.0.27
+
+* Fix issues with dialyzer on OTP26
+
 # Version 1.0.26
 
 * Fix tests issue on OTP26
