@@ -722,7 +722,7 @@ from(_) -> undefined.
 
 %% Send a reply to the client.
 reply({To, Tag}, Reply) ->
-    catch To ! {Tag, Reply}.
+    gen:reply({To, Tag}, Reply).
 
 reply(Name, {To, Tag}, Reply, Debug, StateName) ->
     reply({To, Tag}, Reply),
