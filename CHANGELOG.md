@@ -1,3 +1,7 @@
+# Version 1.0.28
+
+* Improve errors handing in p1_fsm:reply and p1_server:reply
+
 # Version 1.0.27
 
 * Fix issues with dialyzer on OTP26
