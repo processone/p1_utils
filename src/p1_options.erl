@@ -107,7 +107,9 @@ dump(Mod) ->
 %%% gen_server callbacks
 %%%===================================================================
 init([Tab]) ->
-    catch ets:new(Tab, [named_table, public, {read_concurrency, true}]),
+    try ets:new(Tab, [named_table, public, {read_concurrency, true}])
+    catch _:_ -> error
+    end,
     {ok, #state{tab = Tab}}.
 
 handle_call(compile, From, #state{tab = Tab} = State) ->

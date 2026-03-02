@@ -216,48 +216,56 @@ start_link(Name, Mod, Args, Options) ->
 
 
 send_event({global, Name}, Event) ->
-    catch global:send(Name, {'$gen_event', Event}),
+    try global:send(Name, {'$gen_event', Event})
+    catch _:_ -> error
+    end,
     ok;
 send_event(Name, Event) ->
     Name ! {'$gen_event', Event},
     ok.
 
 sync_send_event(Name, Event) ->
-    case catch gen:call(Name, '$gen_sync_event', Event) of
+    try gen:call(Name, '$gen_sync_event', Event) of
 	{ok,Res} ->
-	    Res;
-	{'EXIT',Reason} ->
+	    Res
+    catch
+	_:Reason ->
 	    exit({Reason, {?MODULE, sync_send_event, [Name, Event]}})
     end.
 
 sync_send_event(Name, Event, Timeout) ->
-    case catch gen:call(Name, '$gen_sync_event', Event, Timeout) of
+    try gen:call(Name, '$gen_sync_event', Event, Timeout) of
 	{ok,Res} ->
-	    Res;
-	{'EXIT',Reason} ->
+	    Res
+    catch
+	_:Reason ->
 	    exit({Reason, {?MODULE, sync_send_event, [Name, Event, Timeout]}})
     end.
 
 send_all_state_event({global, Name}, Event) ->
-    catch global:send(Name, {'$gen_all_state_event', Event}),
+    try global:send(Name, {'$gen_all_state_event', Event})
+    catch _:_ -> error
+    end,
     ok;
 send_all_state_event(Name, Event) ->
     Name ! {'$gen_all_state_event', Event},
     ok.
 
 sync_send_all_state_event(Name, Event) ->
-    case catch gen:call(Name, '$gen_sync_all_state_event', Event) of
+    try gen:call(Name, '$gen_sync_all_state_event', Event) of
 	{ok,Res} ->
-	    Res;
-	{'EXIT',Reason} ->
+	    Res
+    catch
+	_:Reason ->
 	    exit({Reason, {?MODULE, sync_send_all_state_event, [Name, Event]}})
     end.
 
 sync_send_all_state_event(Name, Event, Timeout) ->
-    case catch gen:call(Name, '$gen_sync_all_state_event', Event, Timeout) of
+    try gen:call(Name, '$gen_sync_all_state_event', Event, Timeout) of
 	{ok,Res} ->
-	    Res;
-	{'EXIT',Reason} ->
+	    Res
+    catch
+	_:Reason ->
 	    exit({Reason, {?MODULE, sync_send_all_state_event,
 			   [Name, Event, Timeout]}})
     end.
@@ -374,7 +382,7 @@ init_it(Starter, Parent, Name0, Mod, Args, Options) ->
     Limits = limit_options(Options),
     Queue = queue:new(),
     QueueLen = 0,
-    case catch Mod:init(Args) of
+    try Mod:init(Args) of
 	{ok, StateName, StateData} ->
 	    proc_lib:init_ack(Starter, {ok, self()}),
 	    loop(Parent, Name, StateName, StateData, Mod, infinity, Debug, Limits, Queue, QueueLen);
@@ -387,13 +395,14 @@ init_it(Starter, Parent, Name0, Mod, Args, Options) ->
 	ignore ->
 	    proc_lib:init_ack(Starter, ignore),
 	    exit(normal);
-	{'EXIT', Reason} ->
-	    proc_lib:init_ack(Starter, {error, Reason}),
-	    exit(Reason);
 	Else ->
 	    Error = {bad_return_value, Else},
 	    proc_lib:init_ack(Starter, {error, Error}),
 	    exit(Error)
+    catch
+	_:Reason ->
+	    proc_lib:init_ack(Starter, {error, Reason}),
+	    exit(Reason)
     end.
 
 name({local,Name}) -> Name;
@@ -517,11 +526,13 @@ system_terminate(Reason, _Parent, Debug,
 system_code_change([Name, StateName, StateData, Mod, Time,
 		    Limits, Queue, QueueLen],
 		   _Module, OldVsn, Extra) ->
-    case catch Mod:code_change(OldVsn, StateName, StateData, Extra) of
+    try Mod:code_change(OldVsn, StateName, StateData, Extra) of
 	{ok, NewStateName, NewStateData} ->
 	    {ok, [Name, NewStateName, NewStateData, Mod, Time,
 		  Limits, Queue, QueueLen]};
 	Else -> Else
+    catch
+        _:Error -> Error
     end.
 
 %%-----------------------------------------------------------------
@@ -579,7 +590,7 @@ relay_messages(MRef, TRef, Clone) ->
 handle_msg(Msg, Parent, Name, StateName, StateData, Mod, _Time,
 	   Limits, Queue, QueueLen) -> %No debug here
     From = from(Msg),
-    case catch dispatch(Msg, Mod, StateName, StateData) of
+    try dispatch(Msg, Mod, StateName, StateData) of
 	{next_state, NStateName, NStateData} ->
 	    loop(Parent, Name, NStateName, NStateData,
 		 Mod, infinity, [], Limits, Queue, QueueLen);
@@ -603,7 +614,7 @@ handle_msg(Msg, Parent, Name, StateName, StateData, Mod, _Time,
 				 Time1
 			 end,
 	    Now = p1_time_compat:monotonic_time(milli_seconds),
-	    Reason = case catch rpc_call(Node, M, F, A, RPCTimeout) of
+	    Reason = try rpc_call(Node, M, F, A, RPCTimeout) of
 			 {ok, Clone} ->
 			     process_flag(trap_exit, true),
 			     MRef = erlang:monitor(process, Clone),
@@ -613,6 +624,9 @@ handle_msg(Msg, Parent, Name, StateName, StateData, Mod, _Time,
 			     relay_messages(MRef, TRef, Clone, Queue);
 			 _ ->
 			     normal
+                     catch
+                         _:_ ->
+                             normal
 		     end,
             Queue1 =
                 case Reason of
@@ -624,21 +638,24 @@ handle_msg(Msg, Parent, Name, StateName, StateData, Mod, _Time,
 	{stop, Reason, NStateData} ->
 	    terminate(Reason, Name, Msg, Mod, StateName, NStateData, [], Queue);
 	{stop, Reason, Reply, NStateData} when From =/= undefined ->
-	    {'EXIT', R} = (catch terminate(Reason, Name, Msg, Mod,
-					   StateName, NStateData, [], Queue)),
+	    {error, R} = try terminate(Reason, Name, Msg, Mod,
+					   StateName, NStateData, [], Queue)
+                          catch _:E -> {error, E}
+                          end,
 	    reply(From, Reply),
 	    exit(R);
-	{'EXIT', What} ->
-	    terminate(What, Name, Msg, Mod, StateName, StateData, [], Queue);
 	Reply ->
 	    terminate({bad_return_value, Reply},
 		      Name, Msg, Mod, StateName, StateData, [], Queue)
+    catch
+	_:What ->
+	    terminate(What, Name, Msg, Mod, StateName, StateData, [], Queue)
     end.
 
 handle_msg(Msg, Parent, Name, StateName, StateData,
 	   Mod, _Time, Debug, Limits, Queue, QueueLen) ->
     From = from(Msg),
-    case catch dispatch(Msg, Mod, StateName, StateData) of
+    try dispatch(Msg, Mod, StateName, StateData) of
 	{next_state, NStateName, NStateData} ->
 	    Debug1 = sys:handle_debug(Debug, fun print_event/3,
 				      {Name, NStateName}, return),
@@ -666,7 +683,7 @@ handle_msg(Msg, Parent, Name, StateName, StateData,
 				 Time1
 			 end,
 	    Now = p1_time_compat:monotonic_time(milli_seconds),
-	    Reason = case catch rpc_call(Node, M, F, A, RPCTimeout) of
+	    Reason = try rpc_call(Node, M, F, A, RPCTimeout) of
 			 {ok, Clone} ->
 			     process_flag(trap_exit, true),
 			     MRef = erlang:monitor(process, Clone),
@@ -676,6 +693,9 @@ handle_msg(Msg, Parent, Name, StateName, StateData,
 			     relay_messages(MRef, TRef, Clone, Queue);
 			 _ ->
 			     normal
+                     catch
+                         _:_ ->
+                             normal
 		     end,
             Queue1 =
                 case Reason of
@@ -688,16 +708,19 @@ handle_msg(Msg, Parent, Name, StateName, StateData,
 	    terminate(Reason, Name, Msg, Mod, StateName, NStateData, Debug,
                       Queue);
 	{stop, Reason, Reply, NStateData} when From =/= undefined ->
-	    {'EXIT', R} = (catch terminate(Reason, Name, Msg, Mod,
+	    {error, R} = try terminate(Reason, Name, Msg, Mod,
 					   StateName, NStateData, Debug,
-                                           Queue)),
+                                           Queue)
+                         catch _:E -> {error, E}
+                         end,
 	    reply(Name, From, Reply, Debug, StateName),
 	    exit(R);
-	{'EXIT', What} ->
-	    terminate(What, Name, Msg, Mod, StateName, StateData, Debug, Queue);
 	Reply ->
 	    terminate({bad_return_value, Reply},
 		      Name, Msg, Mod, StateName, StateData, Debug, Queue)
+    catch
+        _:What ->
+	    terminate(What, Name, Msg, Mod, StateName, StateData, Debug, Queue)
     end.
 
 dispatch({'$gen_event', Event}, Mod, StateName, StateData) ->
@@ -737,10 +760,7 @@ terminate(Reason, Name, Msg, Mod, StateName, StateData, Debug, Queue) ->
     lists:foreach(
       fun(Message) -> self() ! Message end,
       queue:to_list(Queue)),
-    case catch Mod:terminate(Reason, StateName, StateData) of
-	{'EXIT', R} ->
-	    error_info(Mod, R, Name, Msg, StateName, StateData, Debug),
-	    exit(R);
+    try Mod:terminate(Reason, StateName, StateData) of
 	_ ->
 	    case Reason of
 		normal ->
@@ -759,6 +779,10 @@ terminate(Reason, Name, Msg, Mod, StateName, StateData, Debug, Queue) ->
 		    error_info(Mod, Reason, Name, Msg, StateName, StateData, Debug),
 		    exit(Reason)
 	    end
+    catch
+	_:R ->
+	    error_info(Mod, R, Name, Msg, StateName, StateData, Debug),
+	    exit(R)
     end.
 
 error_info(Mod, Reason, Name, Msg, StateName, StateData, Debug) ->
@@ -780,7 +804,10 @@ error_info(Mod, Reason, Name, Msg, StateName, StateData, Debug) ->
 		Reason
 	end,
     StateToPrint = case erlang:function_exported(Mod, print_state, 1) of
-      true -> (catch Mod:print_state(StateData));
+      true ->
+              try Mod:print_state(StateData)
+              catch _:_ -> error
+              end;
       false -> StateData
     end,
     Str = "** State machine ~p terminating \n" ++
@@ -832,9 +859,8 @@ format_status(Opt, StatusData) ->
     Specific =
 	case erlang:function_exported(Mod, format_status, 2) of
 	    true ->
-		case catch Mod:format_status(Opt,[PDict,StateData]) of
-		    {'EXIT', _} -> [{data, [{"StateData", StateData}]}];
-		    Else -> Else
+		try Mod:format_status(Opt,[PDict,StateData])
+                catch _:_ -> [{data, [{"StateData", StateData}]}]
 		end;
 	    _ ->
 		[{data, [{"StateData", StateData}]}]
@@ -886,11 +912,12 @@ rpc_call(Node, Mod, Fun, Args, Timeout) ->
     Caller = self(),
     F = fun() ->
 		group_leader(whereis(user), self()),
-		case catch apply(Mod, Fun, Args) of
-		    {'EXIT', _} = Err ->
-			Caller ! {Ref, {badrpc, Err}};
+		try apply(Mod, Fun, Args) of
 		    Result ->
 			Caller ! {Ref, Result}
+                catch
+		    _:Err ->
+			Caller ! {Ref, {badrpc, Err}}
 		end
 	end,
     Pid = spawn(Node, F),
@@ -903,7 +930,9 @@ rpc_call(Node, Mod, Fun, Args, Timeout) ->
 	    {badrpc, Reason}
     after Timeout ->
 	    erlang:demonitor(MRef, [flush]),
-	    catch exit(Pid, kill),
+            try exit(Pid, kill)
+            catch _:_ -> error
+            end,
 	    receive
 		{Ref, Result} ->
 		    Result

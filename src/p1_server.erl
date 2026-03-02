@@ -195,18 +195,20 @@ start_link(Name, Mod, Args, Options) ->
 %% is handled here (? Shall we do that here (or rely on timeouts) ?).
 %% -----------------------------------------------------------------
 call(Name, Request) ->
-    case catch gen:call(Name, '$gen_call', Request) of
+    try gen:call(Name, '$gen_call', Request) of
 	{ok,Res} ->
-	    Res;
-	{'EXIT',Reason} ->
+	    Res
+    catch
+	_:Reason ->
 	    exit({Reason, {?MODULE, call, [Name, Request]}})
     end.
 
 call(Name, Request, Timeout) ->
-    case catch gen:call(Name, '$gen_call', Request, Timeout) of
+    try gen:call(Name, '$gen_call', Request, Timeout) of
 	{ok,Res} ->
-	    Res;
-	{'EXIT',Reason} ->
+	    Res
+    catch
+	_:Reason ->
 	    exit({Reason, {?MODULE, call, [Name, Request, Timeout]}})
     end.
 
@@ -214,10 +216,14 @@ call(Name, Request, Timeout) ->
 %% Make a cast to a generic server.
 %% -----------------------------------------------------------------
 cast({global,Name}, Request) ->
-    catch global:send(Name, cast_msg(Request)),
+    try global:send(Name, cast_msg(Request))
+    catch _:_ -> error
+    end,
     ok;
 cast({via, Mod, Name}, Request) ->
-    catch Mod:send(Name, cast_msg(Request)),
+    try Mod:send(Name, cast_msg(Request))
+    catch _:_ -> error
+    end,
     ok;
 cast({Name,Node}=Dest, Request) when is_atom(Name), is_atom(Node) ->
     do_cast(Dest, Request);
@@ -330,7 +336,7 @@ init_it(Starter, Parent, Name0, Mod, Args, Options) ->
     Limits = limit_options(Options),
     Queue = queue:new(),
     QueueLen = 0,
-    case catch Mod:init(Args) of
+    try Mod:init(Args) of
 	{ok, State} ->
 	    proc_lib:init_ack(Starter, {ok, self()}),
 	    loop(Parent, Name, State, Mod, infinity, Debug,
@@ -353,14 +359,15 @@ init_it(Starter, Parent, Name0, Mod, Args, Options) ->
 	    unregister_name(Name0),
 	    proc_lib:init_ack(Starter, ignore),
 	    exit(normal);
-	{'EXIT', Reason} ->
-	    unregister_name(Name0),
-	    proc_lib:init_ack(Starter, {error, Reason}),
-	    exit(Reason);
 	Else ->
 	    Error = {bad_return_value, Else},
 	    proc_lib:init_ack(Starter, {error, Error}),
 	    exit(Error)
+    catch
+	_:Reason ->
+	    unregister_name(Name0),
+	    proc_lib:init_ack(Starter, {error, Reason}),
+	    exit(Reason)
     end.
 
 name({local,Name}) -> Name;
@@ -369,7 +376,9 @@ name({via,_, Name}) -> Name;
 name(Pid) when is_pid(Pid) -> Pid.
 
 unregister_name({local,Name}) ->
-    _ = (catch unregister(Name));
+    _ = try unregister(Name)
+        catch _:_ -> error
+        end;
 unregister_name({global,Name}) ->
     _ = global:unregister_name(Name);
 unregister_name({via, Mod, Name}) ->
@@ -481,11 +490,14 @@ decode_msg(Msg, Parent, Name, State, Mod, Time, Debug,
 %%% Send/receive functions
 %%% ---------------------------------------------------
 do_send(Dest, Msg) ->
-    case catch erlang:send(Dest, Msg, [noconnect]) of
+    try erlang:send(Dest, Msg, [noconnect]) of
 	noconnect ->
 	    spawn(erlang, send, [Dest,Msg]);
 	Other ->
 	    Other
+    catch
+        _:Error ->
+            Error
     end.
 
 do_multi_call(Nodes, Name, Req, infinity) ->
@@ -534,7 +546,9 @@ send_nodes([Node|Tail], Name, Tag, Req, Monitors)
   when is_atom(Node) ->
     Monitor = start_monitor(Node, Name),
     %% Handle non-existing names in rec_nodes.
-    catch {Name, Node} ! {'$gen_call', {self(), {Tag, Node}}, Req},
+    try {Name, Node} ! {'$gen_call', {self(), {Tag, Node}}, Req}
+    catch _:_ -> error
+    end,
     send_nodes(Tail, Name, Tag, Req, [Monitor | Monitors]);
 send_nodes([_Node|Tail], Name, Tag, Req, Monitors) ->
     %% Skip non-atom Node
@@ -594,7 +608,7 @@ rec_nodes(Tag, [N|Tail], Name, Badnodes, Replies, Time, TimerId) ->
 	    end
     end;
 rec_nodes(_, [], _, Badnodes, Replies, _, TimerId) ->
-    case catch erlang:cancel_timer(TimerId) of
+    try erlang:cancel_timer(TimerId) of
 	false ->  % It has already sent it's message
 	    receive
 		{timeout, TimerId, _} -> ok
@@ -603,6 +617,9 @@ rec_nodes(_, [], _, Badnodes, Replies, _, TimerId) ->
 	    end;
 	_ -> % Timer was cancelled, or TimerId was 'undefined'
 	    ok
+    catch
+        _:_ ->
+            ok
     end,
     {Replies, Badnodes}.
 
@@ -647,13 +664,14 @@ start_monitor(Node, Name) when is_atom(Node), is_atom(Name) ->
 	    self() ! {'DOWN', Ref, process, {Name, Node}, noconnection},
 	    {Node, Ref};
        true ->
-	    case catch erlang:monitor(process, {Name, Node}) of
-		{'EXIT', _} ->
-		    %% Remote node is R6
-		    monitor_node(Node, true),
-		    Node;
+	    try erlang:monitor(process, {Name, Node}) of
 		Ref when is_reference(Ref) ->
 		    {Node, Ref}
+            catch
+		_:_ ->
+		    %% Remote node is R6
+		    monitor_node(Node, true),
+		    Node
 	    end
     end.
 
@@ -668,7 +686,7 @@ dispatch(Info, Mod, State) ->
 
 handle_msg({'$gen_call', From, Msg}, Parent, Name, State, Mod,
 	   Limits, Queue, QueueLen) ->
-    case catch Mod:handle_call(Msg, From, State) of
+    try Mod:handle_call(Msg, From, State) of
 	{reply, Reply, NState} ->
 	    reply(From, Reply),
 	    loop(Parent, Name, NState, Mod, infinity, [],
@@ -684,22 +702,28 @@ handle_msg({'$gen_call', From, Msg}, Parent, Name, State, Mod,
 	    loop(Parent, Name, NState, Mod, Time1, [],
                  Limits, Queue, QueueLen);
 	{stop, Reason, Reply, NState} ->
-	    {'EXIT', R} =
-		(catch terminate(Reason, Name, Msg, Mod, NState, [], Queue)),
+            {error, R} = try terminate(Reason, Name, Msg, Mod, NState, [], Queue)
+                         catch _:E -> {error, E}
+                         end,
 	    reply(From, Reply),
 	    exit(R);
 	Other -> handle_common_reply(Other, Parent, Name, Msg, Mod, State,
                                      Limits, Queue, QueueLen)
+    catch
+	_:Other -> handle_common_reply(Other, Parent, Name, Msg, Mod, State,
+                                     Limits, Queue, QueueLen)
     end;
 handle_msg(Msg, Parent, Name, State, Mod,
 	   Limits, Queue, QueueLen) ->
-    Reply = (catch dispatch(Msg, Mod, State)),
+    Reply = try dispatch(Msg, Mod, State)
+            catch _:Error -> Error
+            end,
     handle_common_reply(Reply, Parent, Name, Msg, Mod, State,
                         Limits, Queue, QueueLen).
 
 handle_msg({'$gen_call', From, Msg}, Parent, Name, State, Mod, Debug,
 	   Limits, Queue, QueueLen) ->
-    case catch Mod:handle_call(Msg, From, State) of
+    try Mod:handle_call(Msg, From, State) of
 	{reply, Reply, NState} ->
 	    Debug1 = reply(Name, From, Reply, NState, Debug),
 	    loop(Parent, Name, NState, Mod, infinity, Debug1,
@@ -719,17 +743,24 @@ handle_msg({'$gen_call', From, Msg}, Parent, Name, State, Mod, Debug,
 	    loop(Parent, Name, NState, Mod, Time1, Debug1,
                  Limits, Queue, QueueLen);
 	{stop, Reason, Reply, NState} ->
-	    {'EXIT', R} =
-		(catch terminate(Reason, Name, Msg, Mod, NState, Debug, Queue)),
+	    {error, R} = try terminate(Reason, Name, Msg, Mod, NState, Debug, Queue)
+                         catch _:E -> {error, E}
+                         end,
 	    reply(Name, From, Reply, NState, Debug),
 	    exit(R);
 	Other ->
 	    handle_common_reply(Other, Parent, Name, Msg, Mod, State, Debug,
                                 Limits, Queue, QueueLen)
+    catch
+        _:Other ->
+	    handle_common_reply(Other, Parent, Name, Msg, Mod, State, Debug,
+                                Limits, Queue, QueueLen)
     end;
 handle_msg(Msg, Parent, Name, State, Mod, Debug,
 	   Limits, Queue, QueueLen) ->
-    Reply = (catch dispatch(Msg, Mod, State)),
+    Reply = try dispatch(Msg, Mod, State)
+            catch _:RR -> RR
+            end,
     handle_common_reply(Reply, Parent, Name, Msg, Mod, State, Debug,
                         Limits, Queue, QueueLen).
 
@@ -795,10 +826,12 @@ system_terminate(Reason, _Parent, Debug, [Name, State, Mod, _Time,
 
 system_code_change([Name, State, Mod, Time,
 		    Limits, Queue, QueueLen], _Module, OldVsn, Extra) ->
-    case catch Mod:code_change(OldVsn, State, Extra) of
+    try Mod:code_change(OldVsn, State, Extra) of
 	{ok, NewState} -> {ok, [Name, NewState, Mod, Time,
                                 Limits, Queue, QueueLen]};
 	Else -> Else
+    catch
+        Error -> Error
     end.
 
 system_get_state([_Name, State, _Mod, _Time,
@@ -844,10 +877,7 @@ terminate(Reason, Name, Msg, Mod, State, Debug, Queue) ->
     lists:foreach(
       fun(Message) -> self() ! Message end,
       queue:to_list(Queue)),
-    case catch Mod:terminate(Reason, State) of
-	{'EXIT', R} ->
-	    error_info(Mod, R, Name, Msg, State, Debug),
-	    exit(R);
+    try Mod:terminate(Reason, State) of
 	_ ->
 	    case Reason of
 		normal ->
@@ -867,9 +897,10 @@ terminate(Reason, Name, Msg, Mod, State, Debug, Queue) ->
 			case erlang:function_exported(Mod, format_status, 2) of
 			    true ->
 				Args = [get(), State],
-				case catch Mod:format_status(terminate, Args) of
-				    {'EXIT', _} -> State;
+				try Mod:format_status(terminate, Args) of
 				    Else -> Else
+                                catch
+				    _:_ -> State
 				end;
 			    _ ->
 				State
@@ -877,6 +908,10 @@ terminate(Reason, Name, Msg, Mod, State, Debug, Queue) ->
 		    error_info(Mod, Reason, Name, Msg, FmtState, Debug),
 		    exit(Reason)
 	    end
+    catch
+	_:R ->
+	    error_info(Mod, R, Name, Msg, State, Debug),
+	    exit(R)
     end.
 
 error_info(_Mod, _Reason, application_controller, _Msg, _State, _Debug) ->
@@ -903,7 +938,9 @@ error_info(Mod, Reason, Name, Msg, State, Debug) ->
 		Reason
 	end,
     StateToPrint = case erlang:function_exported(Mod, print_state, 1) of
-      true -> (catch Mod:print_state(State));
+      true -> try Mod:print_state(State)
+              catch _:Error -> Error
+              end;
       false -> State
     end,
     format("** Generic server ~p terminating \n"
@@ -932,13 +969,12 @@ debug_options(Name, Opts) ->
     end.
 
 dbg_opts(Name, Opts) ->
-    case catch sys:debug_options(Opts) of
-	{'EXIT',_} ->
+    try sys:debug_options(Opts)
+    catch
+	_:_ ->
 	    format("~p: ignoring erroneous debug options - ~p~n",
 		   [Name, Opts]),
-	    [];
-	Dbg ->
-	    Dbg
+	    []
     end.
 
 get_proc_name(Pid) when is_pid(Pid) ->
@@ -1007,10 +1043,11 @@ format_status(Opt, StatusData) ->
     Specific =
 	case erlang:function_exported(Mod, format_status, 2) of
 	    true ->
-		case catch Mod:format_status(Opt, [PDict, State]) of
-		    {'EXIT', _} -> DefaultStatus;
+		try Mod:format_status(Opt, [PDict, State]) of
                     StatusList when is_list(StatusList) -> StatusList;
 		    Else -> [Else]
+                catch
+		    _:_ -> DefaultStatus
 		end;
 	    _ ->
 		DefaultStatus

@@ -277,7 +277,7 @@ all_pids(Type) ->
 	      %% exclude ourself from statistics
 	      Acc;
 	 (P, Acc) ->
-	      case catch process_info(
+	      try process_info(
 			   P,
 			   [message_queue_len,
 			    status,
@@ -310,6 +310,9 @@ all_pids(Type) ->
 		      end;
 		  _ ->
 		      Acc
+              catch
+                  _:_ ->
+                      Acc
 	      end
       end, [], processes()).
 
