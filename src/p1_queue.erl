@@ -31,11 +31,14 @@
 %%%===================================================================
 -spec start(file:filename()) -> ok | {error, any()}.
 start(Dir) ->
-    application:ensure_all_started(p1_utils),
-    case p1_file_queue:start(Dir) of
-	{ok, _} -> ok;
-	{error, {already_started, _}} -> ok;
-	Err -> Err
+    case application:ensure_all_started(p1_utils) of
+        {ok, _} ->
+            case p1_file_queue:start(Dir) of
+            	{ok, _} -> ok;
+            	{error, {already_started, _}} -> ok;
+            	Err -> Err
+            end;
+        Err -> Err
     end.
 
 -spec stop() -> ok | {error, any()}.
