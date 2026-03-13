@@ -120,7 +120,9 @@ Rules = [
 	                           "https://github.com/processone/coveralls-erl.git",
 	                           {branch, "addjsonfile"}}} ]), []},
 	 {[deps], os:getenv("USE_GLOBAL_DEPS") /= false,
-	  GlobalDepsFilter, []}
+	  GlobalDepsFilter, []},
+	 {[pre_hooks], not IsRebar3,
+	  AppendList([{eunit, "mkdir -p .eunit && cp ebin/p1_utils.app .eunit/"}]), []}
 	],
 
 
