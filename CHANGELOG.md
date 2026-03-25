@@ -1,3 +1,9 @@
+# Version 1.0.29
+
+* Improve error reporting when failing to start properly
+* Fix issue with test when using rebar2
+* Remove stuff deprecated in R29
+
 # Version 1.0.28
 
 * Improve errors handing in p1_fsm:reply and p1_server:reply
